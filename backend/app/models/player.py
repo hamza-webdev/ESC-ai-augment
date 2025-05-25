@@ -1,6 +1,7 @@
 from datetime import datetime, date
 from sqlalchemy import Numeric
 from app import db
+from app.models.user import User
 
 class Player(db.Model):
     """Player model for managing football players."""
@@ -45,6 +46,7 @@ class Player(db.Model):
     # Relationships
     stats = db.relationship('PlayerStats', backref='player', lazy='dynamic', cascade='all, delete-orphan')
     training_attendances = db.relationship('TrainingAttendance', backref='player', lazy='dynamic', cascade='all, delete-orphan')
+    user_account = db.relationship('User', backref='player_profile', lazy=True, uselist=False, foreign_keys=[user_id])
 
     def __init__(self, user_id, position, birth_date, nationality, **kwargs):
         self.user_id = user_id
