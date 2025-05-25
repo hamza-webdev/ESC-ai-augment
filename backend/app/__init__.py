@@ -83,9 +83,47 @@ def create_app(config_name='development'):
     def internal_error(error):
         return {'error': 'Internal server error'}, 500
 
+    # Root endpoint
+    @app.route('/')
+    def index():
+        return {
+            'message': 'ESC Football App API',
+            'version': '1.0.0',
+            'club': 'Espoir Sportif de Chorbane',
+            'status': 'running',
+            'endpoints': {
+                'health': '/api/health',
+                'auth': '/api/auth',
+                'players': '/api/players',
+                'matches': '/api/matches',
+                'trainings': '/api/trainings',
+                'finances': '/api/finances',
+                'news': '/api/news'
+            }
+        }
+
     # Health check endpoint
     @app.route('/api/health')
     def health_check():
         return {'status': 'healthy', 'message': 'ESC Football App API is running'}
+
+    # API info endpoint
+    @app.route('/api/info')
+    def api_info():
+        return {
+            'name': 'ESC Football App API',
+            'version': '1.0.0',
+            'description': 'API pour la gestion de l\'équipe de football ESC',
+            'club': 'Espoir Sportif de Chorbane',
+            'environment': os.getenv('FLASK_ENV', 'development'),
+            'endpoints': {
+                'auth': '/api/auth',
+                'players': '/api/players',
+                'matches': '/api/matches',
+                'trainings': '/api/trainings',
+                'finances': '/api/finances',
+                'news': '/api/news'
+            }
+        }
 
     return app

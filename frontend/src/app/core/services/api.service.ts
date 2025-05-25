@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { HttpClient, HttpParams, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { catchError, map, retry } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   Player,
@@ -21,6 +22,64 @@ export class ApiService {
 
   constructor(private http: HttpClient) { }
 
+  /**
+   * Get headers with authentication
+   */
+  private getHeaders(): HttpHeaders {
+    const token = localStorage.getItem('access_token');
+    let headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+
+    if (token) {
+      headers = headers.set('Authorization', `Bearer ${token}`);
+    }
+
+    return headers;
+  }
+
+  /**
+   * Handle HTTP errors
+   */
+  private handleError = (error: HttpErrorResponse): Observable<never> => {
+    let errorMessage = 'Une erreur est survenue';
+
+    if (error.error instanceof ErrorEvent) {
+      // Client-side error
+      errorMessage = error.error.message;
+    } else {
+      // Server-side error
+      switch (error.status) {
+        case 401:
+          errorMessage = 'Session expirée. Veuillez vous reconnecter.';
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          // Redirect to login
+          window.location.href = '/auth/login';
+          break;
+        case 403:
+          errorMessage = 'Accès non autorisé.';
+          break;
+        case 404:
+          errorMessage = 'Ressource non trouvée.';
+          break;
+        case 422:
+          errorMessage = error.error?.message || 'Données invalides.';
+          break;
+        case 500:
+          errorMessage = 'Erreur serveur. Veuillez réessayer plus tard.';
+          break;
+        default:
+          if (error.error && error.error.message) {
+            errorMessage = error.error.message;
+          }
+      }
+    }
+
+    console.error('API Error:', error);
+    return throwError(() => new Error(errorMessage));
+  }
+
   // Players API
   getPlayers(params?: any): Observable<PaginatedResponse<Player>> {
     let httpParams = new HttpParams();
@@ -31,23 +90,46 @@ export class ApiService {
         }
       });
     }
-    return this.http.get<PaginatedResponse<Player>>(`${this.API_URL}/players`, { params: httpParams });
+    return this.http.get<PaginatedResponse<Player>>(`${this.API_URL}/players`, {
+      params: httpParams,
+      headers: this.getHeaders()
+    }).pipe(
+      retry(1),
+      catchError(this.handleError)
+    );
   }
 
   getPlayer(id: number): Observable<Player> {
-    return this.http.get<Player>(`${this.API_URL}/players/${id}`);
+    return this.http.get<Player>(`${this.API_URL}/players/${id}`, {
+      headers: this.getHeaders()
+    }).pipe(
+      retry(1),
+      catchError(this.handleError)
+    );
   }
 
   createPlayer(player: Partial<Player>): Observable<any> {
-    return this.http.post(`${this.API_URL}/players`, player);
+    return this.http.post(`${this.API_URL}/players`, player, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
   }
 
   updatePlayer(id: number, player: Partial<Player>): Observable<any> {
-    return this.http.put(`${this.API_URL}/players/${id}`, player);
+    return this.http.put(`${this.API_URL}/players/${id}`, player, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
   }
 
   deletePlayer(id: number): Observable<any> {
-    return this.http.delete(`${this.API_URL}/players/${id}`);
+    return this.http.delete(`${this.API_URL}/players/${id}`, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
   }
 
   getPlayerStats(id: number, season?: number): Observable<any> {
