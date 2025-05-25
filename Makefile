@@ -91,7 +91,7 @@ dev-backend: ## Démarrage du backend en mode développement
 .PHONY: dev-frontend
 dev-frontend: ## Démarrage du frontend en mode développement
 	@echo "$(YELLOW)🅰️  Démarrage du frontend Angular...$(NC)"
-	cd $(FRONTEND_DIR) && $(NG) serve --host 0.0.0.0 --port 4200
+	cd $(FRONTEND_DIR) && $(NG) serve --host 0.0.0.0 --port 5005
 
 .PHONY: dev-watch
 dev-watch: ## Démarrage avec rechargement automatique
@@ -280,7 +280,7 @@ status: ## Statut de l'application
 	@echo ""
 	@echo "$(YELLOW)🌐 Endpoints:$(NC)"
 	@echo "  • Backend API: http://localhost:5000"
-	@echo "  • Frontend:    http://localhost:4200"
+	@echo "  • Frontend:    http://localhost:5005"
 	@echo "  • pgAdmin:     http://localhost:5050"
 	@echo ""
 
@@ -301,7 +301,7 @@ shell-frontend: ## Shell dans le conteneur frontend
 health: ## Vérification de la santé de l'application
 	@echo "$(YELLOW)🏥 Vérification de la santé...$(NC)"
 	@curl -s http://localhost:5000/api/health || echo "$(RED)❌ Backend non accessible$(NC)"
-	@curl -s http://localhost:4200 > /dev/null && echo "$(GREEN)✅ Frontend accessible$(NC)" || echo "$(RED)❌ Frontend non accessible$(NC)"
+	@curl -s http://localhost:5005 > /dev/null && echo "$(GREEN)✅ Frontend accessible$(NC)" || echo "$(RED)❌ Frontend non accessible$(NC)"
 
 # =============================================================================
 # QUICK START
@@ -322,7 +322,7 @@ quick-start: ## Démarrage rapide complet
 	@echo ""
 	@echo "$(BLUE)Endpoints disponibles:$(NC)"
 	@echo "  • API: http://localhost:5000/api/health"
-	@echo "  • Frontend: http://localhost:4200 (après 'make dev-frontend')"
+	@echo "  • Frontend: http://localhost:5005 (après 'make dev-frontend')"
 	@echo ""
 
 # =============================================================================

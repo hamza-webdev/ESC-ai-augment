@@ -40,19 +40,19 @@ print_info() {
 
 check_requirements() {
     print_step "Vérification des prérequis..."
-    
+
     # Check Docker
     if ! command -v docker &> /dev/null; then
         print_error "Docker n'est pas installé. Veuillez l'installer d'abord."
         exit 1
     fi
-    
+
     # Check Docker Compose
     if ! command -v docker-compose &> /dev/null; then
         print_error "Docker Compose n'est pas installé. Veuillez l'installer d'abord."
         exit 1
     fi
-    
+
     # Check Make (optional)
     if command -v make &> /dev/null; then
         MAKE_AVAILABLE=true
@@ -61,13 +61,13 @@ check_requirements() {
         MAKE_AVAILABLE=false
         print_info "Make n'est pas disponible, utilisation des commandes Docker directes"
     fi
-    
+
     print_success "Prérequis vérifiés"
 }
 
 setup_environment() {
     print_step "Configuration de l'environnement..."
-    
+
     # Create .env file for backend if it doesn't exist
     if [ ! -f backend/.env ]; then
         print_info "Création du fichier .env pour le backend..."
@@ -102,52 +102,52 @@ EOF
     else
         print_info "Fichier .env existe déjà"
     fi
-    
+
     # Create uploads directory
     mkdir -p backend/uploads
     mkdir -p backups
-    
+
     print_success "Environnement configuré"
 }
 
 start_database() {
     print_step "Démarrage des services de base de données..."
-    
+
     # Start database services
     docker-compose up -d db redis
-    
+
     # Wait for database to be ready
     print_info "Attente de la disponibilité de PostgreSQL..."
     sleep 10
-    
+
     # Check if database is ready
     for i in {1..30}; do
         if docker-compose exec -T db pg_isready -U esc_user -d esc_db &> /dev/null; then
             print_success "PostgreSQL est prêt"
             break
         fi
-        
+
         if [ $i -eq 30 ]; then
             print_error "Timeout: PostgreSQL n'est pas disponible"
             exit 1
         fi
-        
+
         echo -n "."
         sleep 2
     done
-    
+
     print_success "Services de base de données démarrés"
 }
 
 initialize_database() {
     print_step "Initialisation de la base de données..."
-    
+
     # Check if database is already initialized
     if docker-compose exec -T db psql -U esc_user -d esc_db -c "SELECT 1 FROM users LIMIT 1;" &> /dev/null; then
         print_info "Base de données déjà initialisée"
         return
     fi
-    
+
     # Initialize database
     if [ -f backend/init_db.py ]; then
         print_info "Exécution du script d'initialisation..."
@@ -165,8 +165,8 @@ initialize_database() {
                 role VARCHAR(20) DEFAULT 'player',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
-            
-            INSERT INTO users (username, email, password_hash, role) 
+
+            INSERT INTO users (username, email, password_hash, role)
             VALUES ('admin', 'admin@esc.tn', 'pbkdf2:sha256:260000\$salt\$hash', 'admin')
             ON CONFLICT (username) DO NOTHING;
         "
@@ -176,7 +176,7 @@ initialize_database() {
 
 install_dependencies() {
     print_step "Installation des dépendances..."
-    
+
     # Backend dependencies
     if [ -f backend/requirements.txt ]; then
         print_info "Installation des dépendances Python..."
@@ -186,7 +186,7 @@ install_dependencies() {
         fi
         cd ..
     fi
-    
+
     # Frontend dependencies
     if [ -f frontend/package.json ]; then
         print_info "Installation des dépendances Node.js..."
@@ -196,13 +196,13 @@ install_dependencies() {
         fi
         cd ..
     fi
-    
+
     print_success "Dépendances installées"
 }
 
 start_services() {
     print_step "Démarrage des services de l'application..."
-    
+
     if [ "$MAKE_AVAILABLE" = true ]; then
         print_info "Utilisation de Make pour démarrer les services..."
         make docker-up &> /dev/null || docker-compose up -d
@@ -210,21 +210,21 @@ start_services() {
         print_info "Démarrage avec Docker Compose..."
         docker-compose up -d
     fi
-    
+
     print_success "Services démarrés"
 }
 
 show_status() {
     print_step "Vérification du statut des services..."
-    
+
     echo ""
     docker-compose ps
     echo ""
-    
+
     print_success "Application ESC Football démarrée avec succès !"
     echo ""
     print_info "🌐 Accès aux services :"
-    echo "   • Frontend Angular: http://localhost:4200"
+    echo "   • Frontend Angular: http://localhost:5005"
     echo "   • Backend API: http://localhost:5000"
     echo "   • API Health Check: http://localhost:5000/api/health"
     echo "   • pgAdmin: http://localhost:5050"
@@ -260,19 +260,19 @@ cleanup_on_error() {
 main() {
     # Set up error handling
     trap cleanup_on_error ERR
-    
+
     print_header
-    
+
     check_requirements
     setup_environment
     start_database
     initialize_database
     install_dependencies
     start_services
-    
+
     # Wait a bit for services to start
     sleep 5
-    
+
     show_status
 }
 

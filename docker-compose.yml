@@ -40,7 +40,7 @@ services:
 
   # Flask Backend API
   backend:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: esc_backend
@@ -81,7 +81,7 @@ services:
       - NODE_ENV=development
       - API_URL=http://localhost:5000/api
     ports:
-      - "4200:4200"
+      - "5005:5005"
     volumes:
       - ./frontend:/app
       - /app/node_modules

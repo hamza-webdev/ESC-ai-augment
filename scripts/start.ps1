@@ -46,21 +46,21 @@ function Test-CommandExists {
 
 function Test-Requirements {
     Write-Step "Vérification des prérequis..."
-    
+
     $allGood = $true
-    
+
     # Check Docker
     if (-not (Test-CommandExists "docker")) {
         Write-Error "Docker n'est pas installé. Veuillez l'installer d'abord."
         $allGood = $false
     }
-    
+
     # Check Docker Compose
     if (-not (Test-CommandExists "docker-compose")) {
         Write-Error "Docker Compose n'est pas installé. Veuillez l'installer d'abord."
         $allGood = $false
     }
-    
+
     # Check if Docker is running
     try {
         docker version | Out-Null
@@ -70,22 +70,22 @@ function Test-Requirements {
         Write-Error "Docker n'est pas en cours d'exécution. Veuillez le démarrer."
         $allGood = $false
     }
-    
+
     if (-not $allGood) {
         exit 1
     }
-    
+
     Write-Success "Prérequis vérifiés"
 }
 
 function Initialize-Environment {
     Write-Step "Configuration de l'environnement..."
-    
+
     # Create .env file for backend if it doesn't exist
     $envFile = "backend\.env"
     if (-not (Test-Path $envFile)) {
         Write-Info "Création du fichier .env pour le backend..."
-        
+
         $envContent = @"
 # Flask Configuration
 FLASK_ENV=development
@@ -111,40 +111,40 @@ MAIL_USE_TLS=1
 MAIL_USERNAME=your-email@gmail.com
 MAIL_PASSWORD=your-app-password
 "@
-        
+
         $envContent | Out-File -FilePath $envFile -Encoding UTF8
         Write-Success "Fichier .env créé"
     }
     else {
         Write-Info "Fichier .env existe déjà"
     }
-    
+
     # Create directories
     if (-not (Test-Path "backend\uploads")) {
         New-Item -ItemType Directory -Path "backend\uploads" -Force | Out-Null
     }
-    
+
     if (-not (Test-Path "backups")) {
         New-Item -ItemType Directory -Path "backups" -Force | Out-Null
     }
-    
+
     Write-Success "Environnement configuré"
 }
 
 function Start-DatabaseServices {
     Write-Step "Démarrage des services de base de données..."
-    
+
     # Start database services
     docker-compose up -d db redis
-    
+
     # Wait for database to be ready
     Write-Info "Attente de la disponibilité de PostgreSQL..."
     Start-Sleep -Seconds 10
-    
+
     # Check if database is ready
     $maxAttempts = 30
     $attempt = 0
-    
+
     do {
         $attempt++
         try {
@@ -161,13 +161,13 @@ function Start-DatabaseServices {
             Start-Sleep -Seconds 2
         }
     } while ($attempt -lt $maxAttempts)
-    
+
     Write-Success "Services de base de données démarrés"
 }
 
 function Initialize-Database {
     Write-Step "Initialisation de la base de données..."
-    
+
     # Check if database is already initialized
     try {
         docker-compose exec -T db psql -U esc_user -d esc_db -c "SELECT 1 FROM users LIMIT 1;" | Out-Null
@@ -177,7 +177,7 @@ function Initialize-Database {
     catch {
         # Database not initialized, continue
     }
-    
+
     # Initialize database
     if (Test-Path "backend\init_db.py") {
         Write-Info "Exécution du script d'initialisation..."
@@ -195,7 +195,7 @@ function Initialize-Database {
     }
     else {
         Write-Info "Script d'initialisation non trouvé, création des tables de base..."
-        
+
         $sql = @"
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
@@ -206,11 +206,11 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO users (username, email, password_hash, role) 
+INSERT INTO users (username, email, password_hash, role)
 VALUES ('admin', 'admin@esc.tn', 'pbkdf2:sha256:260000$salt$hash', 'admin')
 ON CONFLICT (username) DO NOTHING;
 "@
-        
+
         docker-compose exec -T db psql -U esc_user -d esc_db -c $sql
         Write-Success "Tables de base créées"
     }
@@ -218,23 +218,23 @@ ON CONFLICT (username) DO NOTHING;
 
 function Start-AllServices {
     Write-Step "Démarrage de tous les services..."
-    
+
     docker-compose up -d
-    
+
     Write-Success "Services démarrés"
 }
 
 function Show-Status {
     Write-Step "Vérification du statut des services..."
-    
+
     Write-Host ""
     docker-compose ps
     Write-Host ""
-    
+
     Write-Success "Application ESC Football démarrée avec succès !"
     Write-Host ""
     Write-Info "🌐 Accès aux services :"
-    Write-Host "   • Frontend Angular: http://localhost:4200" -ForegroundColor White
+    Write-Host "   • Frontend Angular: http://localhost:5005" -ForegroundColor White
     Write-Host "   • Backend API: http://localhost:5000" -ForegroundColor White
     Write-Host "   • API Health Check: http://localhost:5000/api/health" -ForegroundColor White
     Write-Host "   • pgAdmin: http://localhost:5050" -ForegroundColor White
@@ -255,19 +255,19 @@ function Show-Status {
 function Main {
     try {
         Write-Header
-        
+
         if (-not $SkipChecks) {
             Test-Requirements
         }
-        
+
         Initialize-Environment
         Start-DatabaseServices
         Initialize-Database
         Start-AllServices
-        
+
         # Wait a bit for services to start
         Start-Sleep -Seconds 5
-        
+
         Show-Status
     }
     catch {
