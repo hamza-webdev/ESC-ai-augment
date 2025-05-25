@@ -1,1 +1,138 @@
-<p>match-form works!</p>
+<mat-card class="match-form-card">
+  <mat-card-header>
+    <mat-card-title>{{ pageTitle }}</mat-card-title>
+    <mat-card-subtitle>Manage match details</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    <div *ngIf="isLoading" class="loading-spinner">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Loading data...</p>
+    </div>
+
+    <form [formGroup]="matchForm" (ngSubmit)="onSubmit()" *ngIf="!isLoading">
+      <!-- Pre-Match Information -->
+      <div class="form-section">
+        <h3>Match Setup</h3>
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Opponent</mat-label>
+            <input matInput formControlName="opponent" required>
+            <mat-error *ngIf="f['opponent'].hasError('required')">Opponent is required.</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Location</mat-label>
+            <input matInput formControlName="location" required>
+            <mat-error *ngIf="f['location'].hasError('required')">Location is required.</mat-error>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Match Date</mat-label>
+            <input matInput [matDatepicker]="matchDatePicker" formControlName="match_date" required>
+            <mat-datepicker-toggle matSuffix [for]="matchDatePicker"></mat-datepicker-toggle>
+            <mat-datepicker #matchDatePicker></mat-datepicker>
+            <mat-error *ngIf="f['match_date'].hasError('required')">Match date is required.</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Match Time (HH:mm)</mat-label>
+            <input matInput type="time" formControlName="match_time" placeholder="HH:mm" required>
+            <mat-error *ngIf="f['match_time'].hasError('required')">Match time is required.</mat-error>
+            <mat-error *ngIf="f['match_time'].hasError('pattern')">Invalid time format (HH:mm).</mat-error>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Competition</mat-label>
+            <mat-select formControlName="competition" required>
+              <mat-option *ngFor="let type of competitionTypes" [value]="type.value">
+                {{ type.label }}
+              </mat-option>
+            </mat-select>
+            <mat-error *ngIf="f['competition'].hasError('required')">Competition is required.</mat-error>
+          </mat-form-field>
+
+          <div class="form-field toggle-field">
+            <mat-slide-toggle formControlName="is_home" color="primary">
+              Home Match
+            </mat-slide-toggle>
+          </div>
+        </div>
+
+        <div class="form-row">
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Referee (Optional)</mat-label>
+                <input matInput formControlName="referee">
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Weather (Optional)</mat-label>
+                <input matInput formControlName="weather">
+            </mat-form-field>
+        </div>
+        <mat-form-field appearance="outline" class="form-field-single">
+            <mat-label>Temperature (°C) (Optional)</mat-label>
+            <input matInput type="number" formControlName="temperature">
+        </mat-form-field>
+      </div>
+
+      <!-- Post-Match Information - Collapsible Section -->
+      <mat-expansion-panel [(expanded)]="postMatchPanelOpenState" class="post-match-panel">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            Post-Match Details (Optional)
+          </mat-panel-title>
+          <mat-panel-description>
+            Enter scores, attendance, reports after the match.
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+
+        <div class="form-section post-match-fields">
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="form-field">
+              <mat-label>Goals For</mat-label>
+              <input matInput type="number" formControlName="goals_for" min="0">
+              <mat-error *ngIf="f['goals_for'].hasError('min')">Goals cannot be negative.</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="form-field">
+              <mat-label>Goals Against</mat-label>
+              <input matInput type="number" formControlName="goals_against" min="0">
+              <mat-error *ngIf="f['goals_against'].hasError('min')">Goals cannot be negative.</mat-error>
+            </mat-form-field>
+          </div>
+
+          <mat-form-field appearance="outline" class="form-field-single">
+            <mat-label>Attendance</mat-label>
+            <input matInput type="number" formControlName="attendance" min="0">
+            <mat-error *ngIf="f['attendance'].hasError('min')">Attendance cannot be negative.</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field-full">
+            <mat-label>Match Report</mat-label>
+            <textarea matInput formControlName="match_report" cdkTextareaAutosize cdkAutosizeMinRows="3" cdkAutosizeMaxRows="8"></textarea>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field-full">
+            <mat-label>Highlights (JSON Links)</mat-label>
+            <textarea matInput formControlName="highlights" cdkTextareaAutosize cdkAutosizeMinRows="2" cdkAutosizeMaxRows="5" placeholder='e.g., {"youtube": "link", "photos": "gallery_link"}'></textarea>
+            <mat-hint>Enter as a JSON object if providing multiple links.</mat-hint>
+          </mat-form-field>
+        </div>
+      </mat-expansion-panel>
+
+      <mat-card-actions class="form-actions">
+        <button mat-stroked-button type="button" (click)="onCancel()" [disabled]="isLoading">
+          <mat-icon>cancel</mat-icon> Cancel
+        </button>
+        <button mat-raised-button color="primary" type="submit" [disabled]="isLoading">
+          <!-- Removed [disabled]="playerForm.invalid || isLoading" to rely on onSubmit check for more complex validation feedback -->
+          <mat-icon>save</mat-icon> Save Match
+        </button>
+      </mat-card-actions>
+    </form>
+  </mat-card-content>
+</mat-card>

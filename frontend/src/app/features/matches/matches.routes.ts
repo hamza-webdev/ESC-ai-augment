@@ -16,5 +16,9 @@ export const matchesRoutes: Routes = [
   {
     path: ':id/edit',
     loadComponent: () => import('./match-form/match-form.component').then(m => m.MatchFormComponent)
+  },
+  {
+    path: 'calendar', // New route for the calendar view
+    loadComponent: () => import('./match-calendar/match-calendar.component').then(m => m.MatchCalendarComponent)
   }
 ];

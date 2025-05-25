@@ -1,0 +1,52 @@
+.training-form-card {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 20px;
+}
+
+.form-section {
+  margin-bottom: 20px;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+
+  .form-field {
+    flex: 1;
+  }
+}
+
+.form-field-full {
+    width: 100%;
+}
+  
+.form-field-single {
+    width: calc(50% - 8px); /* For two items in a row with gap */
+}
+
+.toggle-field {
+  display: flex;
+  align-items: center;
+  padding-top: 8px; // Align with form field content
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+textarea {
+    resize: vertical;
+}

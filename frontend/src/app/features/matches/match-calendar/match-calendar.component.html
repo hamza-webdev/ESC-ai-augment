@@ -1,0 +1,63 @@
+<div class="match-calendar-container">
+  <div *ngIf="isLoading" class="loading-spinner-container">
+    <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
+    <p>Loading matches...</p>
+  </div>
+
+  <ng-template #customHeader let-locale="locale" let-date="date" let-view="view">
+    <div class="calendar-header">
+      <div class="header-left">
+        <button mat-icon-button (click)="previousPeriod()" matTooltip="Previous Period">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <button mat-icon-button (click)="nextPeriod()" matTooltip="Next Period">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+        <button mat-stroked-button (click)="today()" class="today-button">Today</button>
+      </div>
+      <div class="header-center">
+        <h3>{{ viewDate | calendarDate:(view + 'ViewTitle'):locale }}</h3>
+      </div>
+      <div class="header-right">
+        <button mat-stroked-button (click)="setView(CalendarView.Month)" [class.active]="view === CalendarView.Month">Month</button>
+        <button mat-stroked-button (click)="setView(CalendarView.Week)" [class.active]="view === CalendarView.Week">Week</button>
+        <button mat-stroked-button (click)="setView(CalendarView.Day)" [class.active]="view === CalendarView.Day">Day</button>
+      </div>
+    </div>
+  </ng-template>
+
+  <div *ngIf="!isLoading">
+    <!-- Custom Header -->
+    <ng-container *ngTemplateOutlet="customHeader; context: { locale: 'en', date: viewDate, view: view }"></ng-container>
+    
+    <div [ngSwitch]="view">
+      <mwl-calendar-month-view
+        *ngSwitchCase="CalendarView.Month"
+        [viewDate]="viewDate"
+        [events]="events"
+        [refresh]="refresh"
+        [activeDayIsOpen]="activeDayIsOpen"
+        (dayClicked)="dayClicked($event.day)"
+        (eventClicked)="eventClicked('Clicked', $event.event)">
+      </mwl-calendar-month-view>
+      <mwl-calendar-week-view
+        *ngSwitchCase="CalendarView.Week"
+        [viewDate]="viewDate"
+        [events]="events"
+        [refresh]="refresh"
+        (eventClicked)="eventClicked('Clicked', $event.event)">
+      </mwl-calendar-week-view>
+      <mwl-calendar-day-view
+        *ngSwitchCase="CalendarView.Day"
+        [viewDate]="viewDate"
+        [events]="events"
+        [refresh]="refresh"
+        (eventClicked)="eventClicked('Clicked', $event.event)">
+      </mwl-calendar-day-view>
+    </div>
+  </div>
+
+   <div *ngIf="!isLoading && events.length === 0" class="no-events-message">
+    <p>No matches to display for this period.</p>
+  </div>
+</div>

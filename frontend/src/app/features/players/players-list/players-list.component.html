@@ -37,7 +37,7 @@
         <mat-label>Position</mat-label>
         <mat-select [(ngModel)]="selectedPosition" (selectionChange)="onFilterChange()">
           <mat-option value="">Toutes les positions</mat-option>
-          <mat-option *ngFor="let position of positions" [value]="position.value">
+          <mat-option *ngFor="let position of playerPositions" [value]="position.value">
             {{ position.label }}
           </mat-option>
         </mat-select>
@@ -48,10 +48,9 @@
         <mat-label>Statut</mat-label>
         <mat-select [(ngModel)]="selectedStatus" (selectionChange)="onFilterChange()">
           <mat-option value="">Tous les statuts</mat-option>
-          <mat-option value="active">Actif</mat-option>
-          <mat-option value="injured">Blessé</mat-option>
-          <mat-option value="suspended">Suspendu</mat-option>
-          <mat-option value="inactive">Inactif</mat-option>
+          <mat-option *ngFor="let status of playerStatuses" [value]="status.value">
+            {{ status.label }}
+          </mat-option>
         </mat-select>
       </mat-form-field>
 
@@ -60,10 +59,9 @@
         <mat-label>Âge</mat-label>
         <mat-select [(ngModel)]="selectedAgeRange" (selectionChange)="onFilterChange()">
           <mat-option value="">Tous les âges</mat-option>
-          <mat-option value="16-20">16-20 ans</mat-option>
-          <mat-option value="21-25">21-25 ans</mat-option>
-          <mat-option value="26-30">26-30 ans</mat-option>
-          <mat-option value="31+">31+ ans</mat-option>
+          <mat-option *ngFor="let ageRange of playerAgeRanges" [value]="ageRange.value">
+            {{ ageRange.label }}
+          </mat-option>
         </mat-select>
       </mat-form-field>
 
@@ -206,7 +204,7 @@
           <th mat-header-cell *matHeaderCellDef mat-sort-header>Position</th>
           <td mat-cell *matCellDef="let player">
             <mat-chip-set>
-              <mat-chip [class]="'position-' + player.position.toLowerCase()">
+              <mat-chip [ngClass]="'position-' + (player.position?.toLowerCase() || '')">
                 {{ getPositionLabel(player.position) }}
               </mat-chip>
             </mat-chip-set>
@@ -217,7 +215,7 @@
         <ng-container matColumnDef="age">
           <th mat-header-cell *matHeaderCellDef mat-sort-header>Âge</th>
           <td mat-cell *matCellDef="let player">
-            {{ calculateAge(player.dateOfBirth) }} ans
+            {{ player.age }} ans <!-- Assuming player.age is now directly available -->
           </td>
         </ng-container>
 
@@ -277,6 +275,56 @@
         <button mat-raised-button color="primary" (click)="clearFilters()">
           Effacer les filtres
         </button>
+      </div>
+    </div>
+
+    <!-- Cards View -->
+    <div *ngIf="!loading && viewMode === 'cards'" class="cards-view-container">
+      <div *ngIf="dataSource.data.length === 0" class="no-data">
+        <mat-icon>sports_soccer</mat-icon>
+        <h3>Aucun joueur trouvé</h3>
+        <p>Aucun joueur ne correspond à vos critères de recherche.</p>
+        <button mat-raised-button color="primary" (click)="clearFilters()">
+          Effacer les filtres
+        </button>
+      </div>
+
+      <div class="player-cards-grid" *ngIf="dataSource.data.length > 0">
+        <mat-card *ngFor="let player of dataSource.data" class="player-card">
+          <mat-card-header (click)="viewPlayer(player)" class="clickable">
+            <div mat-card-avatar class="player-card-avatar">
+              <img [src]="player.avatar || '/assets/images/default-avatar.png'"
+                   [alt]="player.firstName + ' ' + player.lastName"
+                   (error)="onImageError($event)">
+            </div>
+            <mat-card-title>{{ player.firstName }} {{ player.lastName }}</mat-card-title>
+            <mat-card-subtitle>
+              {{ getPositionLabel(player.position) }}
+              <span *ngIf="player.number" class="player-card-number"> | N° {{ player.number }}</span>
+            </mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content class="player-card-info">
+            <p><mat-icon inline>cake</mat-icon> Âge: {{ player.age }} ans</p>
+            <p>
+                <mat-icon inline>{{ getStatusIcon(player.status) }}</mat-icon>
+                Statut: <span [ngClass]="'status-chip-card status-' + player.status.toLowerCase()">{{ getStatusLabel(player.status) }}</span>
+            </p>
+          </mat-card-content>
+          <mat-card-actions class="player-card-actions">
+            <button mat-icon-button (click)="viewPlayer(player)" matTooltip="Voir le profil">
+              <mat-icon>visibility</mat-icon>
+            </button>
+            <button mat-icon-button (click)="editPlayer(player)" matTooltip="Modifier">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button (click)="viewStats(player)" matTooltip="Statistiques">
+              <mat-icon>analytics</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" (click)="deletePlayer(player)" matTooltip="Supprimer">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </mat-card-actions>
+        </mat-card>
       </div>
     </div>
 

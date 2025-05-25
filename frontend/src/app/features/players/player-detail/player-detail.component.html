@@ -1,1 +1,228 @@
-<p>player-detail works!</p>
+<div class="player-detail-container">
+  <div *ngIf="isLoading" class="loading-spinner-container">
+    <mat-spinner diameter="60"></mat-spinner>
+    <p>Loading player details...</p>
+  </div>
+
+  <div *ngIf="errorMessage && !isLoading" class="error-message-container">
+    <mat-icon color="warn">error_outline</mat-icon>
+    <p>{{ errorMessage }}</p>
+    <button mat-stroked-button (click)="goBack()">Back to Players List</button>
+  </div>
+
+  <div *ngIf="player && !isLoading" class="player-card-container">
+    <mat-card class="player-detail-card">
+      <mat-card-header class="player-card-header">
+        <div mat-card-avatar class="player-avatar-large">
+          <img [src]="player.avatar || 'assets/images/default-avatar.png'"
+               [alt]="player.full_name || 'Player Avatar'"
+               (error)="$event.target.src='assets/images/default-avatar.png'">
+        </div>
+        <mat-card-title class="player-name">{{ player.full_name || 'N/A' }}</mat-card-title>
+        <mat-card-subtitle class="player-position">
+          {{ getPositionLabel(player.position) }}
+          <span *ngIf="player.jersey_number" class="jersey-number">#{{ player.jersey_number }}</span>
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content class="player-card-content">
+        <div class="actions-top">
+          <button mat-icon-button (click)="goBack()" matTooltip="Back to Players List">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <span class="spacer"></span>
+          <button mat-stroked-button color="primary" (click)="editPlayer()" matTooltip="Edit Player Details">
+            <mat-icon>edit</mat-icon> Edit
+          </button>
+          <button mat-stroked-button color="warn" (click)="deletePlayer()" matTooltip="Delete Player">
+            <mat-icon>delete</mat-icon> Delete
+          </button>
+        </div>
+
+        <mat-tab-group animationDuration="0ms">
+          <mat-tab label="Overview">
+            <div class="tab-content-wrapper">
+              <div class="detail-section">
+                <h3 class="section-title">Personal Information</h3>
+                <mat-list role="list">
+                  <mat-list-item role="listitem">
+                    <span matListItemTitle>Full Name:</span>
+                    <span matListItemLine>{{ player.full_name || 'N/A' }}</span>
+                  </mat-list-item>
+                  <mat-list-item role="listitem">
+                    <span matListItemTitle>Age:</span>
+                    <span matListItemLine>{{ player.age || 'N/A' }} years old</span>
+                  </mat-list-item>
+                  <mat-list-item role="listitem">
+                    <span matListItemTitle>Birth Date:</span>
+                    <span matListItemLine>{{ player.birth_date | date:'longDate' | default:'N/A' }}</span>
+                  </mat-list-item>
+                  <mat-list-item role="listitem">
+                    <span matListItemTitle>Nationality:</span>
+                    <span matListItemLine>{{ player.nationality | titlecase | default:'N/A' }}</span>
+                  </mat-list-item>
+                   <mat-list-item role="listitem">
+                    <span matListItemTitle>Joined Club:</span>
+                    <span matListItemLine>{{ player.joined_date | date:'longDate' | default:'N/A' }}</span>
+                  </mat-list-item>
+                </mat-list>
+              </div>
+
+              <div class="detail-section">
+                <h3 class="section-title">Player Attributes</h3>
+                <mat-list role="list">
+                  <mat-list-item role="listitem">
+                    <span matListItemTitle>Position:</span>
+                    <span matListItemLine>
+                        <mat-chip [ngClass]="'position-' + (player.position?.toLowerCase() || '')">
+                            {{ getPositionLabel(player.position) || 'N/A' }}
+                        </mat-chip>
+                    </span>
+                  </mat-list-item>
+                  <mat-list-item role="listitem">
+                    <span matListItemTitle>Jersey Number:</span>
+                    <span matListItemLine>{{ player.jersey_number || 'N/A' }}</span>
+                  </mat-list-item>
+                  <mat-list-item role="listitem">
+                    <span matListItemTitle>Preferred Foot:</span>
+                    <span matListItemLine>{{ player.preferred_foot | titlecase | default:'N/A' }}</span>
+                  </mat-list-item>
+                  <mat-list-item role="listitem">
+                    <span matListItemTitle>Height:</span>
+                    <span matListItemLine>{{ player.height ? (player.height + ' cm') : 'N/A' }}</span>
+                  </mat-list-item>
+                  <mat-list-item role="listitem">
+                    <span matListItemTitle>Weight:</span>
+                    <span matListItemLine>{{ player.weight ? (player.weight + ' kg') : 'N/A' }}</span>
+                  </mat-list-item>
+                  <mat-list-item role="listitem">
+                    <span matListItemTitle>Status:</span>
+                    <span matListItemLine>
+                      <mat-chip [ngClass]="getStatusClass(player.status)" selected>
+                        {{ player.status | titlecase | default:'N/A' }}
+                      </mat-chip>
+                    </span>
+                  </mat-list-item>
+                   <mat-list-item role="listitem">
+                    <span matListItemTitle>Rating:</span>
+                    <span matListItemLine>{{ player.rating ? player.rating + '/10' : 'N/A' }}</span>
+                  </mat-list-item>
+                </mat-list>
+              </div>
+            </div>
+          </mat-tab>
+
+          <mat-tab label="Contract & Status">
+            <div class="tab-content-wrapper">
+              <div class="detail-section">
+                <h3 class="section-title">Contract Information</h3>
+                <mat-list role="list">
+                  <mat-list-item role="listitem">
+                    <span matListItemTitle>Contract Start:</span>
+                    <span matListItemLine>{{ player.contract_start | date:'longDate' | default:'N/A' }}</span>
+                  </mat-list-item>
+                  <mat-list-item role="listitem">
+                    <span matListItemTitle>Contract End:</span>
+                    <span matListItemLine>{{ player.contract_end | date:'longDate' | default:'N/A' }}</span>
+                  </mat-list-item>
+                  <mat-list-item role="listitem">
+                    <span matListItemTitle>Salary:</span>
+                    <span matListItemLine>{{ player.salary ? (player.salary | currency:'USD':'symbol':'1.0-0') : 'N/A' }}</span>
+                  </mat-list-item>
+                  <mat-list-item role="listitem">
+                    <span matListItemTitle>Market Value:</span>
+                    <span matListItemLine>{{ player.market_value ? (player.market_value | currency:'USD':'symbol':'1.0-0') : 'N/A' }}</span>
+                  </mat-list-item>
+                   <mat-list-item role="listitem">
+                    <span matListItemTitle>Contract Active:</span>
+                    <span matListItemLine>
+                        <mat-chip [color]="player.contract_active ? 'primary' : 'warn'" selected>
+                            {{ player.contract_active ? 'Yes' : 'No' }}
+                        </mat-chip>
+                    </span>
+                  </mat-list-item>
+                  <mat-list-item role="listitem">
+                    <span matListItemTitle>Availability:</span>
+                     <span matListItemLine>
+                        <mat-chip [color]="player.is_available ? 'primary' : 'accent'" selected>
+                            {{ player.is_available ? 'Available' : 'Unavailable' }}
+                        </mat-chip>
+                    </span>
+                  </mat-list-item>
+                </mat-list>
+              </div>
+            </div>
+          </mat-tab>
+
+          <mat-tab label="Medical & Contact">
+             <div class="tab-content-wrapper">
+                <div class="detail-section">
+                    <h3 class="section-title">Medical Information</h3>
+                    <mat-list role="list">
+                        <mat-list-item role="listitem">
+                            <span matListItemTitle>Blood Type:</span>
+                            <span matListItemLine>{{ player.blood_type || 'N/A' }}</span>
+                        </mat-list-item>
+                        <mat-list-item role="listitem" class="multi-line-item">
+                            <span matListItemTitle>Medical Notes:</span>
+                            <span matListItemLine class="pre-wrap">{{ player.medical_notes || 'None' }}</span>
+                        </mat-list-item>
+                    </mat-list>
+                </div>
+                <div class="detail-section">
+                    <h3 class="section-title">Emergency Contact</h3>
+                     <mat-list role="list">
+                        <mat-list-item role="listitem">
+                            <span matListItemTitle>Contact Name:</span>
+                            <span matListItemLine>{{ player.emergency_contact_name || 'N/A' }}</span>
+                        </mat-list-item>
+                        <mat-list-item role="listitem">
+                            <span matListItemTitle>Contact Phone:</span>
+                            <span matListItemLine>{{ player.emergency_contact_phone || 'N/A' }}</span>
+                        </mat-list-item>
+                         <mat-list-item role="listitem" class="multi-line-item">
+                            <span matListItemTitle>Address:</span>
+                            <span matListItemLine class="pre-wrap">{{ player.address || 'N/A' }}</span>
+                        </mat-list-item>
+                    </mat-list>
+                </div>
+             </div>
+          </mat-tab>
+
+          <mat-tab label="Statistics">
+            <div class="tab-content-wrapper">
+              <div class="detail-section">
+                <h3 class="section-title">Career Statistics</h3>
+                <p class="placeholder-text">
+                  Detailed player statistics are not yet available here.
+                  This section will display summary of goals, assists, matches played, etc.
+                </p>
+                <!-- 
+                  When stats are available on player object, e.g. player.career_stats:
+                  <mat-list role="list" *ngIf="player.career_stats">
+                    <mat-list-item role="listitem">
+                      <span matListItemTitle>Matches Played:</span>
+                      <span matListItemLine>{{ player.career_stats.matches_played }}</span>
+                    </mat-list-item>
+                    <mat-list-item role="listitem">
+                      <span matListItemTitle>Goals:</span>
+                      <span matListItemLine>{{ player.career_stats.goals }}</span>
+                    </mat-list-item>
+                     <mat-list-item role="listitem">
+                      <span matListItemTitle>Assists:</span>
+                      <span matListItemLine>{{ player.career_stats.assists }}</span>
+                    </mat-list-item>
+                  </mat-list>
+                -->
+                <button mat-stroked-button color="accent" [routerLink]="['/players', player.id, 'stats']" class="stats-button">
+                  <mat-icon>bar_chart</mat-icon> View Detailed Stats (Future)
+                </button>
+              </div>
+            </div>
+          </mat-tab>
+
+        </mat-tab-group>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

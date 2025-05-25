@@ -36,6 +36,11 @@ export const routes: Routes = [
     loadChildren: () => import('./features/news/news.routes').then(m => m.newsRoutes),
     canActivate: [authGuard]
   },
+  {
+    path: 'trainings',
+    loadChildren: () => import('./features/trainings/trainings.routes').then(m => m.trainingsRoutes),
+    canActivate: [authGuard]
+  },
 
   // Wildcard route - must be last
   {

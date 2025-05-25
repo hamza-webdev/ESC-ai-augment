@@ -19,13 +19,21 @@ import { Router } from '@angular/router';
 import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
 
 import { ApiService } from '../../../core/services/api.service';
-import { Player } from '../../../core/models/user.model';
+// Corrected Player model import path
+import { Player, PlayerPosition, PlayerStatus } from '../../../core/models/player.model';
+// Import constants for filters
+import { PLAYER_POSITIONS, PLAYER_STATUSES_DETTAGLIATI, PLAYER_AGE_RANGES } from '../../../core/constants/player.constants'; // Corrected constant name
+// Import the new ConfirmDialogComponent
+import { ConfirmDialogComponent, ConfirmDialogData } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { MatDialogModule } from '@angular/material/dialog'; // Import MatDialogModule
+
 
 @Component({
   selector: 'app-players-list',
   imports: [
     CommonModule,
     FormsModule,
+    MatDialogModule, // Added MatDialogModule
     MatTableModule,
     MatPaginatorModule,
     MatSortModule,
@@ -74,13 +82,10 @@ export class PlayersListComponent implements OnInit {
   injuredPlayers = 0;
   averageAge = 0;
 
-  // Position options
-  positions = [
-    { value: 'GK', label: 'Gardien' },
-    { value: 'DEF', label: 'Défenseur' },
-    { value: 'MID', label: 'Milieu' },
-    { value: 'ATT', label: 'Attaquant' }
-  ];
+  // Use imported constants
+  playerPositions = PLAYER_POSITIONS;
+  playerStatuses = PLAYER_STATUSES_DETTAGLIATI; // For status filter dropdown - corrected name
+  playerAgeRanges = PLAYER_AGE_RANGES; // For age range filter
 
   constructor(
     private apiService: ApiService,
@@ -99,11 +104,16 @@ export class PlayersListComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadPlayers();
-    this.loadStatistics();
+    // loadStatistics will be called within loadPlayers success
   }
 
   ngAfterViewInit(): void {
     this.dataSource.paginator = this.paginator;
+    // Note: MatSort should be applied to the dataSource if server-side sorting is not used
+    // or if client-side sorting is desired on the fetched page.
+    // If sorting is done server-side, this.sort might interact with API calls.
+    // For now, assuming sort is for client-side operations on the current page,
+    // or handled by API if sort headers are set.
     this.dataSource.sort = this.sort;
   }
 
@@ -113,27 +123,31 @@ export class PlayersListComponent implements OnInit {
   loadPlayers(): void {
     this.loading = true;
 
-    const params = {
+    const params: any = { // Use 'any' for params to avoid type issues with delete
       page: this.currentPage + 1,
       limit: this.pageSize,
       search: this.searchTerm,
       position: this.selectedPosition,
       status: this.selectedStatus,
       age_range: this.selectedAgeRange
+      // Add sorting parameters if backend supports it:
+      // sort_by: this.sort?.active,
+      // sort_direction: this.sort?.direction
     };
 
     // Remove empty parameters
     Object.keys(params).forEach(key => {
-      if (!params[key as keyof typeof params]) {
-        delete params[key as keyof typeof params];
+      if (params[key] === null || params[key] === undefined || params[key] === '') {
+        delete params[key];
       }
     });
 
     this.apiService.getPlayers(params).subscribe({
       next: (response) => {
-        this.dataSource.data = response.data;
-        this.totalCount = response.total;
+        this.dataSource.data = response.data || []; // Ensure data is always an array
+        this.totalCount = response.total || 0;
         this.loading = false;
+        this.updateHeaderStatistics(); // Update header stats based on new data
       },
       error: (error) => {
         console.error('Error loading players:', error);
@@ -148,25 +162,28 @@ export class PlayersListComponent implements OnInit {
   /**
    * Load statistics
    */
-  loadStatistics(): void {
-    // This would typically come from a separate API endpoint
-    this.apiService.getPlayers({ limit: 1000 }).subscribe({
-      next: (response) => {
-        const players = response.data;
-        this.totalPlayers = players.length;
-        this.activePlayers = players.filter(p => p.status === 'active').length;
-        this.injuredPlayers = players.filter(p => p.status === 'injured').length;
+  /**
+   * Update header statistics based on current data.
+   * Note: Active players, injured players, and average age are based on the *currently loaded page data*,
+   * not the entire dataset, unless the API provides these aggregates.
+   * Total players is based on the paginated response's total count.
+   */
+  updateHeaderStatistics(): void {
+    this.totalPlayers = this.totalCount; // This is accurate for the filtered set
 
-        // Calculate average age
-        const totalAge = players.reduce((sum, player) => {
-          return sum + this.calculateAge(player.dateOfBirth);
-        }, 0);
-        this.averageAge = Math.round(totalAge / players.length);
-      },
-      error: (error) => {
-        console.error('Error loading statistics:', error);
-      }
-    });
+    const currentPagePlayers = this.dataSource.data;
+    if (currentPagePlayers && currentPagePlayers.length > 0) {
+      this.activePlayers = currentPagePlayers.filter(p => p.status === 'active').length;
+      this.injuredPlayers = currentPagePlayers.filter(p => p.status === 'injured').length;
+      
+      const totalAgeOnPage = currentPagePlayers.reduce((sum, player) => sum + (player.age || 0), 0);
+      this.averageAge = Math.round(totalAgeOnPage / currentPagePlayers.length);
+    } else {
+      this.activePlayers = 0;
+      this.injuredPlayers = 0;
+      this.averageAge = 0;
+    }
+    // For a more accurate global average age, active/injured counts, a dedicated backend API endpoint is needed.
   }
 
   /**
@@ -223,25 +240,15 @@ export class PlayersListComponent implements OnInit {
   /**
    * Calculate age from date of birth
    */
-  calculateAge(dateOfBirth: string): number {
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-
-    return age;
-  }
+  // calculateAge method is removed as player.age is assumed to be provided by the backend.
+  // If player.age is not available, this method would need to be reinstated and used.
 
   /**
    * Get position label
    */
-  getPositionLabel(position: string): string {
-    const pos = this.positions.find(p => p.value === position);
-    return pos ? pos.label : position;
+  getPositionLabel(positionValue: PlayerPosition | string): string {
+    const position = this.playerPositions.find(p => p.value === positionValue);
+    return position ? position.label : positionValue;
   }
 
   /**
@@ -309,22 +316,39 @@ export class PlayersListComponent implements OnInit {
    * Delete player
    */
   deletePlayer(player: Player): void {
-    if (confirm(`Êtes-vous sûr de vouloir supprimer ${player.firstName} ${player.lastName} ?`)) {
-      this.apiService.deletePlayer(player.id).subscribe({
-        next: () => {
-          this.snackBar.open('Joueur supprimé avec succès', 'Fermer', {
-            duration: 3000
-          });
-          this.loadPlayers();
-          this.loadStatistics();
-        },
-        error: (error) => {
-          console.error('Error deleting player:', error);
-          this.snackBar.open('Erreur lors de la suppression', 'Fermer', {
-            duration: 3000
-          });
-        }
-      });
-    }
+    const dialogData: ConfirmDialogData = {
+      title: 'Confirm Deletion',
+      message: `Are you sure you want to delete player ${player.firstName} ${player.lastName}? This action cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel'
+    };
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px', // Or any other appropriate width
+      data: dialogData
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.loading = true; // Optional: show loading indicator during delete
+        this.apiService.deletePlayer(player.id).subscribe({
+          next: () => {
+            this.loading = false;
+            this.snackBar.open('Player deleted successfully!', 'Fermer', {
+              duration: 3000
+            });
+            // Reload current page data and update stats
+            this.loadPlayers();
+          },
+          error: (error) => {
+            this.loading = false;
+            console.error('Error deleting player:', error);
+            this.snackBar.open('Error deleting player. Please try again.', 'Fermer', { // Corrected message
+              duration: 3000
+            });
+          }
+        });
+      }
+    });
   }
 }

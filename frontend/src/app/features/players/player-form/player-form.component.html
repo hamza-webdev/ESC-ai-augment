@@ -1,1 +1,182 @@
-<p>player-form works!</p>
+<mat-card class="player-form-card">
+  <mat-card-header>
+    <mat-card-title>{{ pageTitle }}</mat-card-title>
+    <mat-card-subtitle>Manage player details</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    <div *ngIf="isLoading" class="loading-spinner">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Loading data...</p>
+    </div>
+
+    <form [formGroup]="playerForm" (ngSubmit)="onSubmit()" *ngIf="!isLoading">
+      <!-- User Account Selection (Create Mode Only) -->
+      <div *ngIf="!isEditMode" class="form-section">
+        <h3>User Account</h3>
+        <mat-form-field appearance="outline">
+          <mat-label>Select User Account</mat-label>
+          <mat-select formControlName="user_id" required>
+            <mat-option *ngFor="let user of assignableUsers$ | async" [value]="user.id">
+              {{ user.full_name || user.username }} ({{ user.email }})
+            </mat-option>
+          </mat-select>
+          <mat-error *ngIf="f['user_id'].hasError('required')">User account is required.</mat-error>
+        </mat-form-field>
+      </div>
+      <div *ngIf="isEditMode && editingPlayerUserName" class="form-section readonly-info">
+         <p><strong>User Account:</strong> {{ editingPlayerUserName }}</p>
+      </div>
+      <div *ngIf="isEditMode && !editingPlayerUserName && playerForm.get('user_id')?.value" class="form-section readonly-info">
+        <!-- Fallback if name isn't loaded for some reason, though it should be -->
+        <p><strong>User Account ID:</strong> {{ playerForm.get('user_id')?.value }}</p>
+     </div>
+
+
+      <!-- Basic Information -->
+      <div class="form-section">
+        <h3>Basic Information</h3>
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Jersey Number</mat-label>
+            <input matInput type="number" formControlName="jersey_number">
+            <mat-error *ngIf="f['jersey_number'].hasError('min') || f['jersey_number'].hasError('max')">
+              Must be between 1 and 999.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Position</mat-label>
+            <mat-select formControlName="position" required>
+              <mat-option *ngFor="let pos of playerPositions" [value]="pos.value">{{ pos.label }}</mat-option>
+            </mat-select>
+            <mat-error *ngIf="f['position'].hasError('required')">Position is required.</mat-error>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Birth Date</mat-label>
+            <input matInput [matDatepicker]="birthPicker" formControlName="birth_date" required>
+            <mat-datepicker-toggle matSuffix [for]="birthPicker"></mat-datepicker-toggle>
+            <mat-datepicker #birthPicker></mat-datepicker>
+            <mat-error *ngIf="f['birth_date'].hasError('required')">Birth date is required.</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Nationality</mat-label>
+            <input matInput formControlName="nationality" required>
+            <mat-error *ngIf="f['nationality'].hasError('required')">Nationality is required.</mat-error>
+          </mat-form-field>
+        </div>
+      </div>
+
+      <!-- Physical Attributes -->
+      <div class="form-section">
+        <h3>Physical Attributes</h3>
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Height (cm)</mat-label>
+            <input matInput type="number" formControlName="height">
+            <mat-error *ngIf="f['height'].hasError('min') || f['height'].hasError('max')">
+              Invalid height.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Weight (kg)</mat-label>
+            <input matInput type="number" formControlName="weight">
+            <mat-error *ngIf="f['weight'].hasError('min') || f['weight'].hasError('max')">
+              Invalid weight.
+            </mat-error>
+          </mat-form-field>
+        </div>
+        <div class="form-row">
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Preferred Foot</mat-label>
+                <mat-select formControlName="preferred_foot">
+                  <mat-option *ngFor="let foot of playerPreferredFeet" [value]="foot.value">{{ foot.label }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+      
+              <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Status</mat-label>
+                <mat-select formControlName="status" required>
+                  <mat-option *ngFor="let stat of playerStatuses" [value]="stat.value">{{ stat.label }}</mat-option>
+                </mat-select>
+                <mat-error *ngIf="f['status'].hasError('required')">Status is required.</mat-error>
+              </mat-form-field>
+        </div>
+      </div>
+
+      <!-- Contract Information -->
+      <div class="form-section">
+        <h3>Contract Information</h3>
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Contract Start Date</mat-label>
+            <input matInput [matDatepicker]="contractStartPicker" formControlName="contract_start">
+            <mat-datepicker-toggle matSuffix [for]="contractStartPicker"></mat-datepicker-toggle>
+            <mat-datepicker #contractStartPicker></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Contract End Date</mat-label>
+            <input matInput [matDatepicker]="contractEndPicker" formControlName="contract_end">
+            <mat-datepicker-toggle matSuffix [for]="contractEndPicker"></mat-datepicker-toggle>
+            <mat-datepicker #contractEndPicker></mat-datepicker>
+          </mat-form-field>
+        </div>
+        <div class="form-row">
+            <mat-form-field appearance="outline" class="form-field-single">
+                <mat-label>Salary</mat-label>
+                <input matInput type="number" formControlName="salary" placeholder="e.g., 50000">
+                <span matTextPrefix>$&nbsp;</span>
+                <span matTextSuffix>.00</span>
+                <mat-error *ngIf="f['salary'].hasError('min')">Salary cannot be negative.</mat-error>
+              </mat-form-field>
+        </div>
+      </div>
+
+       <!-- Medical & Other Information -->
+       <div class="form-section">
+        <h3>Medical & Other Information (Optional)</h3>
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Blood Type</mat-label>
+            <input matInput formControlName="blood_type">
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Emergency Contact Name</mat-label>
+            <input matInput formControlName="emergency_contact_name">
+          </mat-form-field>
+        </div>
+        <div class="form-row">
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Emergency Contact Phone</mat-label>
+                <input matInput formControlName="emergency_contact_phone">
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Address</mat-label>
+                <textarea matInput formControlName="address" cdkTextareaAutosize cdkAutosizeMinRows="1" cdkAutosizeMaxRows="3"></textarea>
+            </mat-form-field>
+        </div>
+        <mat-form-field appearance="outline" class="form-field-full">
+          <mat-label>Medical Notes</mat-label>
+          <textarea matInput formControlName="medical_notes" cdkTextareaAutosize cdkAutosizeMinRows="2" cdkAutosizeMaxRows="5"></textarea>
+        </mat-form-field>
+      </div>
+
+
+      <mat-card-actions class="form-actions">
+        <button mat-stroked-button type="button" (click)="onCancel()" [disabled]="isLoading">
+          <mat-icon>cancel</mat-icon> Cancel
+        </button>
+        <button mat-raised-button color="primary" type="submit" [disabled]="playerForm.invalid || isLoading">
+          <mat-icon>save</mat-icon> Save Player
+        </button>
+      </mat-card-actions>
+
+    </form>
+  </mat-card-content>
+</mat-card>

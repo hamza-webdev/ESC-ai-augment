@@ -1,1 +1,182 @@
-<p>match-detail works!</p>
+<div class="match-detail-container">
+  <div *ngIf="isLoading" class="loading-spinner-container">
+    <mat-spinner diameter="60"></mat-spinner>
+    <p>Loading match details...</p>
+  </div>
+
+  <div *ngIf="errorMessage && !isLoading" class="error-message-container">
+    <mat-icon color="warn">error_outline</mat-icon>
+    <p>{{ errorMessage }}</p>
+    <button mat-stroked-button (click)="goBack()">Back to Matches List</button>
+  </div>
+
+  <div *ngIf="match && !isLoading" class="match-card-container">
+    <mat-card class="match-detail-card">
+      <mat-card-header class="match-card-header">
+        <div mat-card-avatar class="match-icon">
+          <mat-icon>sports_soccer</mat-icon>
+        </div>
+        <mat-card-title class="match-title">
+          {{ match.is_home ? 'ESC Chorbane' : match.opponent }} vs {{ match.is_home ? match.opponent : 'ESC Chorbane' }}
+        </mat-card-title>
+        <mat-card-subtitle class="match-subtitle">
+          {{ match.date | date:'fullDate' }} &bull; {{ match.date | date:'shortTime' }}
+        </mat-card-subtitle>
+        <span class="match-score-header">{{ getMatchScore() }}</span>
+      </mat-card-header>
+
+      <mat-card-content class="match-card-content">
+        <div class="actions-top">
+          <button mat-icon-button (click)="goBack()" matTooltip="Back to Matches List">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          <span class="spacer"></span>
+          <button mat-stroked-button color="primary" (click)="editMatch()" matTooltip="Edit Match Details">
+            <mat-icon>edit</mat-icon> Edit
+          </button>
+          <button mat-stroked-button color="warn" (click)="deleteMatch()" matTooltip="Delete Match">
+            <mat-icon>delete</mat-icon> Delete
+          </button>
+        </div>
+
+        <mat-tab-group animationDuration="0ms">
+          <mat-tab label="Match Overview">
+            <div class="tab-content-wrapper">
+              <div class="detail-section">
+                <h3 class="section-title">Match Information</h3>
+                <mat-list role="list">
+                  <mat-list-item role="listitem">
+                    <mat-icon matListItemIcon>gavel</mat-icon>
+                    <div matListItemTitle>Competition</div>
+                    <div matListItemLine>{{ getCompetitionLabel(match.competition) }}</div>
+                  </mat-list-item>
+                  <mat-list-item role="listitem">
+                    <mat-icon matListItemIcon>location_on</mat-icon>
+                    <div matListItemTitle>Location</div>
+                    <div matListItemLine>{{ match.location }}</div>
+                  </mat-list-item>
+                  <mat-list-item role="listitem">
+                    <mat-icon matListItemIcon>{{ match.is_home ? 'home' : 'flight_takeoff' }}</mat-icon>
+                    <div matListItemTitle>Venue</div>
+                    <div matListItemLine>{{ match.is_home ? 'Home' : 'Away' }}</div>
+                  </mat-list-item>
+                  <mat-list-item role="listitem">
+                    <mat-icon matListItemIcon>event_available</mat-icon>
+                    <div matListItemTitle>Status</div>
+                    <div matListItemLine>
+                      <mat-chip [ngClass]="'status-' + getMatchStatusLabel().toLowerCase().replace(' ', '-')">
+                        {{ getMatchStatusLabel() }}
+                      </mat-chip>
+                    </div>
+                  </mat-list-item>
+                </mat-list>
+              </div>
+
+              <div class="detail-section" *ngIf="match.is_finished || match.referee || match.weather || match.temperature !== null">
+                <h3 class="section-title">Conditions & Officials</h3>
+                <mat-list role="list">
+                  <mat-list-item role="listitem" *ngIf="match.referee">
+                    <mat-icon matListItemIcon>sports</mat-icon>
+                    <div matListItemTitle>Referee</div>
+                    <div matListItemLine>{{ match.referee }}</div>
+                  </mat-list-item>
+                  <mat-list-item role="listitem" *ngIf="match.weather">
+                    <mat-icon matListItemIcon>wb_sunny</mat-icon>
+                    <div matListItemTitle>Weather</div>
+                    <div matListItemLine>{{ match.weather }}</div>
+                  </mat-list-item>
+                  <mat-list-item role="listitem" *ngIf="match.temperature !== null && match.temperature !== undefined">
+                    <mat-icon matListItemIcon>thermostat</mat-icon>
+                    <div matListItemTitle>Temperature</div>
+                    <div matListItemLine>{{ match.temperature }} °C</div>
+                  </mat-list-item>
+                   <mat-list-item role="listitem" *ngIf="match.attendance !== null && match.attendance !== undefined">
+                    <mat-icon matListItemIcon>people</mat-icon>
+                    <div matListItemTitle>Attendance</div>
+                    <div matListItemLine>{{ match.attendance | number }}</div>
+                  </mat-list-item>
+                </mat-list>
+              </div>
+            </div>
+          </mat-tab>
+
+          <mat-tab label="Report & Highlights" *ngIf="match.is_finished">
+            <div class="tab-content-wrapper">
+              <div class="detail-section" *ngIf="match.match_report">
+                <h3 class="section-title">Match Report</h3>
+                <p class="match-report-text pre-wrap">{{ match.match_report }}</p>
+              </div>
+              <div class="detail-section" *ngIf="match.highlights">
+                <h3 class="section-title">Highlights</h3>
+                <p class="highlights-text pre-wrap">{{ match.highlights }}</p>
+                <!-- TODO: Consider parsing JSON if highlights are structured -->
+              </div>
+              <div class="detail-section" *ngIf="!match.match_report && !match.highlights">
+                 <p class="placeholder-text">No match report or highlights available for this match.</p>
+              </div>
+            </div>
+          </mat-tab>
+
+          <mat-tab label="Player Statistics" *ngIf="match.is_finished">
+            <div class="tab-content-wrapper">
+              <div class="detail-section">
+                <h3 class="section-title">Team & Player Performance</h3>
+                <!-- Goalscorers -->
+                <div *ngIf="match.goalscorers && match.goalscorers.length > 0">
+                  <h4>Goalscorers</h4>
+                  <mat-list>
+                    <mat-list-item *ngFor="let scorer of match.goalscorers">
+                      <mat-icon matListItemIcon>sports_soccer</mat-icon>
+                      <div matListItemTitle>{{ scorer.player_name }}</div>
+                      <div matListItemLine>Goals: {{ scorer.goals }}</div>
+                    </mat-list-item>
+                  </mat-list>
+                </div>
+                <div *ngIf="!match.goalscorers || match.goalscorers.length === 0" class="placeholder-text">
+                  No goalscorers recorded for this match.
+                </div>
+                <hr *ngIf="match.goalscorers && match.goalscorers.length > 0">
+                
+                <!-- Placeholder for more detailed player stats table -->
+                <!-- The current Match model has 'team_stats' (any) and 'goalscorers' (PlayerStats[]) -->
+                <!-- If 'team_stats' contains an array of PlayerStats, it could be displayed here -->
+                <div *ngIf="match.team_stats?.player_stats && match.team_stats.player_stats.length > 0">
+                    <h4>Full Player Stats</h4>
+                    <table mat-table [dataSource]="match.team_stats.player_stats" class="player-stats-table">
+                        <ng-container matColumnDef="playerName">
+                            <th mat-header-cell *matHeaderCellDef> Player </th>
+                            <td mat-cell *matCellDef="let stat"> {{stat.player_name}} </td>
+                        </ng-container>
+                        <ng-container matColumnDef="goals">
+                            <th mat-header-cell *matHeaderCellDef> Goals </th>
+                            <td mat-cell *matCellDef="let stat"> {{stat.goals}} </td>
+                        </ng-container>
+                         <ng-container matColumnDef="assists">
+                            <th mat-header-cell *matHeaderCellDef> Assists </th>
+                            <td mat-cell *matCellDef="let stat"> {{stat.assists}} </td>
+                        </ng-container>
+                        <ng-container matColumnDef="minutesPlayed">
+                            <th mat-header-cell *matHeaderCellDef> Mins Played </th>
+                            <td mat-cell *matCellDef="let stat"> {{stat.minutes_played}} </td>
+                        </ng-container>
+                        <tr mat-header-row *matHeaderRowDef="playerStatsDisplayedColumns"></tr>
+                        <tr mat-row *matRowDef="let row; columns: playerStatsDisplayedColumns;"></tr>
+                    </table>
+                </div>
+                <div *ngIf="!(match.team_stats?.player_stats && match.team_stats.player_stats.length > 0) && (match.goalscorers && match.goalscorers.length > 0)" class="placeholder-text">
+                    <br>
+                    More detailed player statistics are not available for this match.
+                </div>
+                 <div *ngIf="!(match.team_stats?.player_stats && match.team_stats.player_stats.length > 0) && !(match.goalscorers && match.goalscorers.length > 0)" class="placeholder-text">
+                    No player statistics recorded for this match.
+                </div>
+
+              </div>
+            </div>
+          </mat-tab>
+
+        </mat-tab-group>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

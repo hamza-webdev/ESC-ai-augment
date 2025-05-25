@@ -1,0 +1,151 @@
+<mat-card class="training-form-card">
+  <mat-card-header>
+    <mat-card-title>{{ pageTitle }}</mat-card-title>
+    <mat-card-subtitle>Plan and manage training session details</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    <div *ngIf="isLoading" class="loading-spinner">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Loading data...</p>
+    </div>
+
+    <form [formGroup]="trainingForm" (ngSubmit)="onSubmit()" *ngIf="!isLoading">
+      <!-- Session Details -->
+      <div class="form-section">
+        <h3>Session Details</h3>
+        <mat-form-field appearance="outline" class="form-field-full">
+          <mat-label>Title</mat-label>
+          <input matInput formControlName="title" required>
+          <mat-error *ngIf="f['title'].hasError('required')">Title is required.</mat-error>
+        </mat-form-field>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Date</mat-label>
+            <input matInput [matDatepicker]="trainingDatePicker" formControlName="training_date" required>
+            <mat-datepicker-toggle matSuffix [for]="trainingDatePicker"></mat-datepicker-toggle>
+            <mat-datepicker #trainingDatePicker></mat-datepicker>
+            <mat-error *ngIf="f['training_date'].hasError('required')">Date is required.</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Location</mat-label>
+            <input matInput formControlName="location" required>
+            <mat-error *ngIf="f['location'].hasError('required')">Location is required.</mat-error>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Start Time (HH:mm)</mat-label>
+            <input matInput type="time" formControlName="start_time" placeholder="HH:mm" required>
+            <mat-error *ngIf="f['start_time'].hasError('required')">Start time is required.</mat-error>
+            <mat-error *ngIf="f['start_time'].hasError('pattern')">Invalid time format (HH:mm).</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>End Time (HH:mm)</mat-label>
+            <input matInput type="time" formControlName="end_time" placeholder="HH:mm" required>
+            <mat-error *ngIf="f['end_time'].hasError('required')">End time is required.</mat-error>
+            <mat-error *ngIf="f['end_time'].hasError('pattern')">Invalid time format (HH:mm).</mat-error>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Type</mat-label>
+            <mat-select formControlName="type" required>
+              <mat-option *ngFor="let type of trainingTypes" [value]="type.value">{{ type.label }}</mat-option>
+            </mat-select>
+            <mat-error *ngIf="f['type'].hasError('required')">Training type is required.</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Intensity</mat-label>
+            <mat-select formControlName="intensity" required>
+              <mat-option *ngFor="let level of trainingIntensities" [value]="level.value">{{ level.label }}</mat-option>
+            </mat-select>
+            <mat-error *ngIf="f['intensity'].hasError('required')">Intensity is required.</mat-error>
+          </mat-form-field>
+        </div>
+      </div>
+
+      <!-- Planning & Execution -->
+      <div class="form-section">
+        <h3>Planning & Execution</h3>
+        <mat-form-field appearance="outline" class="form-field-full">
+          <mat-label>Objectives (Optional)</mat-label>
+          <textarea matInput formControlName="objectives" cdkTextareaAutosize cdkAutosizeMinRows="2" cdkAutosizeMaxRows="5"></textarea>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="form-field-full">
+          <mat-label>Description (Optional)</mat-label>
+          <textarea matInput formControlName="description" cdkTextareaAutosize cdkAutosizeMinRows="3" cdkAutosizeMaxRows="6"></textarea>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="form-field-full">
+          <mat-label>Exercises (Optional)</mat-label>
+          <textarea matInput formControlName="exercises" cdkTextareaAutosize cdkAutosizeMinRows="3" cdkAutosizeMaxRows="8" placeholder="Detail specific drills and activities"></textarea>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="form-field-full">
+          <mat-label>Equipment Needed (Optional)</mat-label>
+          <textarea matInput formControlName="equipment_needed" cdkTextareaAutosize cdkAutosizeMinRows="1" cdkAutosizeMaxRows="4"></textarea>
+        </mat-form-field>
+      </div>
+
+      <!-- Conditions & Status -->
+      <div class="form-section">
+        <h3>Conditions & Status</h3>
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Weather (Optional)</mat-label>
+            <input matInput formControlName="weather">
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Temperature (°C) (Optional)</mat-label>
+            <input matInput type="number" formControlName="temperature">
+          </mat-form-field>
+        </div>
+        <div class="form-row">
+            <mat-form-field appearance="outline" class="form-field">
+                <mat-label>Field Condition (Optional)</mat-label>
+                <mat-select formControlName="field_condition">
+                  <mat-option [value]="null">N/A</mat-option>
+                  <mat-option *ngFor="let cond of fieldConditions" [value]="cond.value">{{ cond.label }}</mat-option>
+                </mat-select>
+            </mat-form-field>
+            <div class="form-field toggle-field">
+                <mat-slide-toggle formControlName="completed" color="primary" matTooltip="Mark if the training session has been completed">
+                  Session Completed
+                </mat-slide-toggle>
+            </div>
+        </div>
+      </div>
+
+      <!-- Post-Training (Optional) -->
+      <div class="form-section">
+        <h3>Post-Training Notes & Feedback (Optional)</h3>
+        <mat-form-field appearance="outline" class="form-field-full">
+          <mat-label>General Notes</mat-label>
+          <textarea matInput formControlName="notes" cdkTextareaAutosize cdkAutosizeMinRows="2" cdkAutosizeMaxRows="5"></textarea>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="form-field-full">
+          <mat-label>Coach Feedback</mat-label>
+          <textarea matInput formControlName="coach_feedback" cdkTextareaAutosize cdkAutosizeMinRows="2" cdkAutosizeMaxRows="5"></textarea>
+        </mat-form-field>
+      </div>
+
+      <mat-card-actions class="form-actions">
+        <button mat-stroked-button type="button" (click)="onCancel()" [disabled]="isLoading">
+          <mat-icon>cancel</mat-icon> Cancel
+        </button>
+        <button mat-raised-button color="primary" type="submit" [disabled]="isLoading">
+          <mat-icon>save</mat-icon> Save Training
+        </button>
+      </mat-card-actions>
+
+    </form>
+  </mat-card-content>
+</mat-card>

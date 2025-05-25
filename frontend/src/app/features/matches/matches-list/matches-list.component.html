@@ -1,1 +1,166 @@
-<p>matches-list works!</p>
+<div class="matches-list-container">
+  <mat-card class="page-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>sports_soccer</mat-icon>
+        Matches
+      </mat-card-title>
+      <mat-card-subtitle>View and manage upcoming and past matches</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Filter Section -->
+      <form [formGroup]="filterForm" class="filters-form">
+        <div class="filter-row">
+          <mat-form-field appearance="outline" class="filter-field search-field">
+            <mat-label>Search</mat-label>
+            <input matInput formControlName="search" placeholder="Opponent, Location...">
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Competition</mat-label>
+            <mat-select formControlName="competition">
+              <mat-option value="">All Competitions</mat-option>
+              <mat-option *ngFor="let comp of competitionTypes" [value]="comp.value">{{ comp.label }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Status</mat-label>
+            <mat-select formControlName="status">
+              <mat-option value="">All Statuses</mat-option>
+              <mat-option *ngFor="let stat of matchStatuses" [value]="stat.value">{{ stat.label }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Year</mat-label>
+            <mat-select formControlName="year">
+              <mat-option value="">All Years</mat-option>
+              <mat-option *ngFor="let y of years" [value]="y">{{ y }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <button mat-stroked-button (click)="clearFilters()" class="clear-filters-btn" matTooltip="Clear all filters">
+            <mat-icon>clear_all</mat-icon> Clear
+          </button>
+        </div>
+      </form>
+
+      <!-- Action Bar -->
+      <div class="action-bar">
+        <button mat-raised-button color="primary" (click)="createMatch()">
+          <mat-icon>add_circle_outline</mat-icon> Create New Match
+        </button>
+        <button mat-stroked-button color="accent" [routerLink]="['/matches/calendar']" class="calendar-view-btn">
+          <mat-icon>calendar_today</mat-icon> Calendar View
+        </button>
+      </div>
+
+      <!-- Loading Spinner -->
+      <div *ngIf="isLoading" class="loading-container">
+        <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
+        <p>Loading matches...</p>
+      </div>
+
+      <!-- Matches Table -->
+      <div class="table-container" [hidden]="isLoading">
+        <table mat-table [dataSource]="dataSource" matSort class="matches-table">
+
+          <!-- Date & Time Column -->
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Date & Time</th>
+            <td mat-cell *matCellDef="let match">{{ match.date | date:'MMM d, y, h:mm a' }}</td>
+          </ng-container>
+
+          <!-- Opponent Column -->
+          <ng-container matColumnDef="opponent">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Opponent</th>
+            <td mat-cell *matCellDef="let match">{{ match.opponent }}</td>
+          </ng-container>
+
+          <!-- Score Column -->
+          <ng-container matColumnDef="score">
+            <th mat-header-cell *matHeaderCellDef>Score</th>
+            <td mat-cell *matCellDef="let match">
+              <span class="score" [ngClass]="{
+                'score-win': match.result === 'win',
+                'score-loss': match.result === 'loss',
+                'score-draw': match.result === 'draw'
+              }">
+                {{ getScore(match) }}
+              </span>
+            </td>
+          </ng-container>
+
+          <!-- Competition Column -->
+          <ng-container matColumnDef="competition">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Competition</th>
+            <td mat-cell *matCellDef="let match">{{ match.competition | titlecase }}</td>
+          </ng-container>
+
+          <!-- Location Column -->
+          <ng-container matColumnDef="location">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Location</th>
+            <td mat-cell *matCellDef="let match">{{ match.location }}</td>
+          </ng-container>
+
+          <!-- Home/Away Column -->
+          <ng-container matColumnDef="is_home">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Venue</th>
+            <td mat-cell *matCellDef="let match">
+              <mat-chip [class.chip-home]="match.is_home" [class.chip-away]="!match.is_home">
+                {{ match.is_home ? 'Home' : 'Away' }}
+              </mat-chip>
+            </td>
+          </ng-container>
+
+          <!-- Status Column -->
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
+            <td mat-cell *matCellDef="let match">
+                <mat-chip [ngClass]="'status-' + getMatchStatus(match).toLowerCase().replace(' ', '-')">
+                    {{ getMatchStatus(match) }}
+                  </mat-chip>
+            </td>
+          </ng-container>
+
+          <!-- Actions Column -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let match">
+              <button mat-icon-button (click)="viewMatchDetails(match)" matTooltip="View Details">
+                <mat-icon>visibility</mat-icon>
+              </button>
+              <button mat-icon-button color="primary" (click)="editMatch(match)" matTooltip="Edit Match">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="deleteMatch(match)" matTooltip="Delete Match">
+                <mat-icon>delete_outline</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;" (click)="viewMatchDetails(row)" class="match-row"></tr>
+        </table>
+
+        <!-- No Data Message -->
+        <div *ngIf="!isLoading && totalCount === 0" class="no-data-container">
+          <mat-icon class="no-data-icon">info_outline</mat-icon>
+          <p>No matches found matching your criteria.</p>
+          <p *ngIf="filterForm.dirty">Try adjusting your filters or <a (click)="clearFilters()" class="clear-link">clear them</a>.</p>
+        </div>
+      </div>
+
+      <!-- Paginator -->
+      <mat-paginator *ngIf="!isLoading && totalCount > 0"
+                     [length]="totalCount"
+                     [pageSize]="pageSize"
+                     [pageSizeOptions]="[5, 10, 25, 100]"
+                     aria-label="Select page of matches">
+      </mat-paginator>
+    </mat-card-content>
+  </mat-card>
+</div>

@@ -3,16 +3,26 @@ import { HttpClient, HttpParams, HttpHeaders, HttpErrorResponse } from '@angular
 import { Observable, throwError } from 'rxjs';
 import { catchError, map, retry } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
+import { HttpClient, HttpParams, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { catchError, map, retry } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
+
+// Import models from their new locations
+import { Player } from '../models/player.model';
+import { User, UserBasic } from '../models/user.model';
+import { PaginatedResponse } from '../models/api-interfaces.model';
+import { Match } from '../models/match.model';
+import { Match } from '../models/match.model';
+import { Training, TrainingAttendance } from '../models/training.model'; // Corrected import for Training & TrainingAttendance
 import {
-  Player,
-  Match,
-  Training,
+  // Match, // Removed from here
+  // Training, // Removed from here
+  // TrainingAttendance, // Removed from here
   Finance,
   News,
-  PaginatedResponse,
-  PlayerStats,
-  TrainingAttendance
-} from '../models/user.model';
+  PlayerStats
+} from '../models/domain.model';
 
 @Injectable({
   providedIn: 'root'
@@ -21,6 +31,9 @@ export class ApiService {
   private readonly API_URL = environment.apiUrl;
 
   constructor(private http: HttpClient) { }
+
+  // Centralized GET, POST, PUT, DELETE methods could be an option too
+  // For now, keeping specific methods as they are, but with corrected model imports.
 
   /**
    * Get headers with authentication
@@ -90,7 +103,7 @@ export class ApiService {
         }
       });
     }
-    return this.http.get<PaginatedResponse<Player>>(`${this.API_URL}/players`, {
+    return this.http.get<PaginatedResponse<Player>>(`${this.API_URL}/players`, { // Player type from player.model
       params: httpParams,
       headers: this.getHeaders()
     }).pipe(
@@ -99,8 +112,8 @@ export class ApiService {
     );
   }
 
-  getPlayer(id: number): Observable<Player> {
-    return this.http.get<Player>(`${this.API_URL}/players/${id}`, {
+  getPlayer(id: number): Observable<Player> { // Player type from player.model
+    return this.http.get<Player>(`${this.API_URL}/players/${id}`, { // Player type from player.model
       headers: this.getHeaders()
     }).pipe(
       retry(1),
@@ -108,16 +121,16 @@ export class ApiService {
     );
   }
 
-  createPlayer(player: Partial<Player>): Observable<any> {
-    return this.http.post(`${this.API_URL}/players`, player, {
+  createPlayer(player: Partial<Player>): Observable<Player> { // Return type Player
+    return this.http.post<Player>(`${this.API_URL}/players`, player, { // Return type Player
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
     );
   }
 
-  updatePlayer(id: number, player: Partial<Player>): Observable<any> {
-    return this.http.put(`${this.API_URL}/players/${id}`, player, {
+  updatePlayer(id: number, player: Partial<Player>): Observable<Player> { // Return type Player
+    return this.http.put<Player>(`${this.API_URL}/players/${id}`, player, { // Return type Player
       headers: this.getHeaders()
     }).pipe(
       catchError(this.handleError)
@@ -157,28 +170,28 @@ export class ApiService {
     return this.http.get<PaginatedResponse<Match>>(`${this.API_URL}/matches`, { params: httpParams });
   }
 
-  getMatch(id: number): Observable<Match> {
-    return this.http.get<Match>(`${this.API_URL}/matches/${id}`);
+  getMatch(id: number): Observable<Match> { // Match type from domain.model
+    return this.http.get<Match>(`${this.API_URL}/matches/${id}`); // Match type from domain.model
   }
 
-  createMatch(match: Partial<Match>): Observable<any> {
-    return this.http.post(`${this.API_URL}/matches`, match);
+  createMatch(match: Partial<Match>): Observable<Match> { // Return type Match
+    return this.http.post<Match>(`${this.API_URL}/matches`, match); // Return type Match
   }
 
-  updateMatch(id: number, match: Partial<Match>): Observable<any> {
-    return this.http.put(`${this.API_URL}/matches/${id}`, match);
+  updateMatch(id: number, match: Partial<Match>): Observable<Match> { // Return type Match
+    return this.http.put<Match>(`${this.API_URL}/matches/${id}`, match); // Return type Match
   }
 
   deleteMatch(id: number): Observable<any> {
     return this.http.delete(`${this.API_URL}/matches/${id}`);
   }
 
-  addPlayerStats(matchId: number, stats: Partial<PlayerStats>): Observable<any> {
-    return this.http.post(`${this.API_URL}/matches/${matchId}/stats`, stats);
+  addPlayerStats(matchId: number, stats: Partial<PlayerStats>): Observable<PlayerStats> { // Return type PlayerStats
+    return this.http.post<PlayerStats>(`${this.API_URL}/matches/${matchId}/stats`, stats); // Return type PlayerStats
   }
 
-  getMatchStats(matchId: number): Observable<any> {
-    return this.http.get(`${this.API_URL}/matches/${matchId}/stats`);
+  getMatchStats(matchId: number): Observable<PlayerStats[]> { // Return type PlayerStats[]
+    return this.http.get<PlayerStats[]>(`${this.API_URL}/matches/${matchId}/stats`); // Return type PlayerStats[]
   }
 
   getUpcomingMatches(limit?: number): Observable<any> {
@@ -210,28 +223,28 @@ export class ApiService {
     return this.http.get<PaginatedResponse<Training>>(`${this.API_URL}/trainings`, { params: httpParams });
   }
 
-  getTraining(id: number): Observable<Training> {
-    return this.http.get<Training>(`${this.API_URL}/trainings/${id}`);
+  getTraining(id: number): Observable<Training> { // Training type from domain.model
+    return this.http.get<Training>(`${this.API_URL}/trainings/${id}`); // Training type from domain.model
   }
 
-  createTraining(training: Partial<Training>): Observable<any> {
-    return this.http.post(`${this.API_URL}/trainings`, training);
+  createTraining(training: Partial<Training>): Observable<Training> { // Return type Training
+    return this.http.post<Training>(`${this.API_URL}/trainings`, training); // Return type Training
   }
 
-  updateTraining(id: number, training: Partial<Training>): Observable<any> {
-    return this.http.put(`${this.API_URL}/trainings/${id}`, training);
+  updateTraining(id: number, training: Partial<Training>): Observable<Training> { // Return type Training
+    return this.http.put<Training>(`${this.API_URL}/trainings/${id}`, training); // Return type Training
   }
 
   deleteTraining(id: number): Observable<any> {
     return this.http.delete(`${this.API_URL}/trainings/${id}`);
   }
 
-  markAttendance(trainingId: number, attendance: Partial<TrainingAttendance>): Observable<any> {
-    return this.http.post(`${this.API_URL}/trainings/${trainingId}/attendance`, attendance);
+  markAttendance(trainingId: number, attendance: Partial<TrainingAttendance>): Observable<TrainingAttendance> { // Return type TrainingAttendance
+    return this.http.post<TrainingAttendance>(`${this.API_URL}/trainings/${trainingId}/attendance`, attendance); // Return type TrainingAttendance
   }
 
-  getTrainingAttendance(trainingId: number): Observable<any> {
-    return this.http.get(`${this.API_URL}/trainings/${trainingId}/attendance`);
+  getTrainingAttendance(trainingId: number): Observable<TrainingAttendance[]> { // Return type TrainingAttendance[]
+    return this.http.get<TrainingAttendance[]>(`${this.API_URL}/trainings/${trainingId}/attendance`); // Return type TrainingAttendance[]
   }
 
   getUpcomingTrainings(limit?: number): Observable<any> {
@@ -244,6 +257,14 @@ export class ApiService {
 
   getTodayTrainings(): Observable<any> {
     return this.http.get(`${this.API_URL}/trainings/today`);
+  }
+
+  batchUpdateTrainingAttendance(trainingId: number, attendanceData: Partial<TrainingAttendance>[]): Observable<any> {
+    return this.http.post(`${this.API_URL}/trainings/${trainingId}/attendance/batch`, attendanceData, {
+      headers: this.getHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
   }
 
   // Finance API
@@ -259,16 +280,16 @@ export class ApiService {
     return this.http.get<PaginatedResponse<Finance>>(`${this.API_URL}/finances`, { params: httpParams });
   }
 
-  getFinance(id: number): Observable<Finance> {
-    return this.http.get<Finance>(`${this.API_URL}/finances/${id}`);
+  getFinance(id: number): Observable<Finance> { // Finance type from domain.model
+    return this.http.get<Finance>(`${this.API_URL}/finances/${id}`); // Finance type from domain.model
   }
 
-  createFinance(finance: Partial<Finance>): Observable<any> {
-    return this.http.post(`${this.API_URL}/finances`, finance);
+  createFinance(finance: Partial<Finance>): Observable<Finance> { // Return type Finance
+    return this.http.post<Finance>(`${this.API_URL}/finances`, finance); // Return type Finance
   }
 
-  updateFinance(id: number, finance: Partial<Finance>): Observable<any> {
-    return this.http.put(`${this.API_URL}/finances/${id}`, finance);
+  updateFinance(id: number, finance: Partial<Finance>): Observable<Finance> { // Return type Finance
+    return this.http.put<Finance>(`${this.API_URL}/finances/${id}`, finance); // Return type Finance
   }
 
   deleteFinance(id: number): Observable<any> {
@@ -311,20 +332,20 @@ export class ApiService {
     return this.http.get<PaginatedResponse<News>>(`${this.API_URL}/news`, { params: httpParams });
   }
 
-  getNewsArticle(id: number): Observable<News> {
-    return this.http.get<News>(`${this.API_URL}/news/${id}`);
+  getNewsArticle(id: number): Observable<News> { // News type from domain.model
+    return this.http.get<News>(`${this.API_URL}/news/${id}`); // News type from domain.model
   }
 
-  getNewsBySlug(slug: string): Observable<News> {
-    return this.http.get<News>(`${this.API_URL}/news/slug/${slug}`);
+  getNewsBySlug(slug: string): Observable<News> { // News type from domain.model
+    return this.http.get<News>(`${this.API_URL}/news/slug/${slug}`); // News type from domain.model
   }
 
-  createNews(news: Partial<News>): Observable<any> {
-    return this.http.post(`${this.API_URL}/news`, news);
+  createNews(news: Partial<News>): Observable<News> { // Return type News
+    return this.http.post<News>(`${this.API_URL}/news`, news); // Return type News
   }
 
-  updateNews(id: number, news: Partial<News>): Observable<any> {
-    return this.http.put(`${this.API_URL}/news/${id}`, news);
+  updateNews(id: number, news: Partial<News>): Observable<News> { // Return type News
+    return this.http.put<News>(`${this.API_URL}/news/${id}`, news); // Return type News
   }
 
   deleteNews(id: number): Observable<any> {
@@ -381,5 +402,19 @@ export class ApiService {
   // Health check
   healthCheck(): Observable<any> {
     return this.http.get(`${this.API_URL}/health`);
+  }
+
+  // Method to get users who can be assigned to a player profile
+  getAssignableUsers(): Observable<UserBasic[]> {
+    // Assuming an endpoint like GET /users?has_player_profile=false or a dedicated one
+    // For now, let's use a hypothetical endpoint /users/assignable-to-player
+    // Adjust the endpoint and params as per actual backend implementation
+    return this.http.get<UserBasic[]>(`${this.API_URL}/users/assignable-to-player`, {
+      headers: this.getHeaders()
+    }).pipe(
+      map(response => response || []), // Ensure it returns an array even if API sends null
+      retry(1),
+      catchError(this.handleError)
+    );
   }
 }
