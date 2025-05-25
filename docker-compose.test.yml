@@ -1,0 +1,245 @@
+# ESC Football App - Docker Compose pour les tests
+# Espoir Sportif de Chorbane
+
+version: '3.8'
+
+services:
+  # =============================================================================
+  # SERVICES DE TEST
+  # =============================================================================
+
+  # Base de données PostgreSQL pour les tests
+  db-test:
+    image: postgres:15-alpine
+    container_name: esc_db_test
+    environment:
+      POSTGRES_DB: esc_test_db
+      POSTGRES_USER: esc_test_user
+      POSTGRES_PASSWORD: esc_test_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    tmpfs:
+      - /var/lib/postgresql/data
+    networks:
+      - esc_test_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U esc_test_user -d esc_test_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  # Redis pour les tests
+  redis-test:
+    image: redis:7-alpine
+    container_name: esc_redis_test
+    command: redis-server --save ""
+    tmpfs:
+      - /data
+    networks:
+      - esc_test_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  # Backend pour les tests unitaires
+  backend-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.test
+    container_name: esc_backend_test
+    environment:
+      - FLASK_ENV=testing
+      - TESTING=1
+      - DATABASE_URL=postgresql://esc_test_user:esc_test_password@db-test:5432/esc_test_db
+      - REDIS_URL=redis://redis-test:6379/0
+      - SECRET_KEY=test-secret-key
+      - JWT_SECRET_KEY=test-jwt-secret-key
+      - WTF_CSRF_ENABLED=False
+    volumes:
+      - ./backend:/app
+      - ./backend/tests:/app/tests
+      - test_coverage:/app/htmlcov
+    networks:
+      - esc_test_network
+    depends_on:
+      db-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo 'Waiting for services...' &&
+        sleep 5 &&
+        echo 'Running backend tests...' &&
+        python -m pytest tests/ -v --cov=app --cov-report=html --cov-report=term-missing &&
+        echo 'Backend tests completed!'
+      "
+
+  # Frontend pour les tests unitaires
+  frontend-test:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.test
+    container_name: esc_frontend_test
+    environment:
+      - NODE_ENV=test
+      - CI=true
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - test_coverage:/app/coverage
+    networks:
+      - esc_test_network
+    command: >
+      sh -c "
+        echo 'Running frontend tests...' &&
+        npm run test:ci &&
+        echo 'Frontend tests completed!'
+      "
+
+  # Tests end-to-end avec Cypress
+  e2e-test:
+    build:
+      context: ./e2e
+      dockerfile: Dockerfile
+    container_name: esc_e2e_test
+    environment:
+      - CYPRESS_baseUrl=http://frontend-e2e:4200
+      - CYPRESS_apiUrl=http://backend-e2e:5000/api
+    volumes:
+      - ./e2e:/app
+      - e2e_screenshots:/app/cypress/screenshots
+      - e2e_videos:/app/cypress/videos
+    networks:
+      - esc_test_network
+    depends_on:
+      - backend-e2e
+      - frontend-e2e
+    command: >
+      sh -c "
+        echo 'Waiting for application to be ready...' &&
+        sleep 30 &&
+        echo 'Running E2E tests...' &&
+        npx cypress run &&
+        echo 'E2E tests completed!'
+      "
+
+  # Backend pour les tests E2E
+  backend-e2e:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.test
+    container_name: esc_backend_e2e
+    environment:
+      - FLASK_ENV=testing
+      - DATABASE_URL=postgresql://esc_test_user:esc_test_password@db-test:5432/esc_test_db
+      - REDIS_URL=redis://redis-test:6379/0
+      - SECRET_KEY=e2e-secret-key
+      - JWT_SECRET_KEY=e2e-jwt-secret-key
+    volumes:
+      - ./backend:/app
+    networks:
+      - esc_test_network
+    depends_on:
+      db-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo 'Initializing test database...' &&
+        python init_test_db.py &&
+        echo 'Starting backend for E2E tests...' &&
+        python app.py
+      "
+
+  # Frontend pour les tests E2E
+  frontend-e2e:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.test
+    container_name: esc_frontend_e2e
+    environment:
+      - NODE_ENV=test
+      - API_URL=http://backend-e2e:5000/api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - esc_test_network
+    depends_on:
+      - backend-e2e
+    command: >
+      sh -c "
+        echo 'Starting frontend for E2E tests...' &&
+        ng serve --host 0.0.0.0 --port 4200 --disable-host-check
+      "
+
+  # Service de test de performance avec Artillery
+  performance-test:
+    image: artilleryio/artillery:latest
+    container_name: esc_performance_test
+    volumes:
+      - ./tests/performance:/scripts
+      - performance_reports:/reports
+    networks:
+      - esc_test_network
+    depends_on:
+      - backend-e2e
+    command: >
+      sh -c "
+        echo 'Waiting for backend to be ready...' &&
+        sleep 30 &&
+        echo 'Running performance tests...' &&
+        artillery run /scripts/load-test.yml --output /reports/performance-report.json &&
+        artillery report /reports/performance-report.json --output /reports/performance-report.html &&
+        echo 'Performance tests completed!'
+      "
+
+  # Service de test de sécurité avec OWASP ZAP
+  security-test:
+    image: owasp/zap2docker-stable
+    container_name: esc_security_test
+    volumes:
+      - security_reports:/zap/wrk
+    networks:
+      - esc_test_network
+    depends_on:
+      - backend-e2e
+      - frontend-e2e
+    command: >
+      sh -c "
+        echo 'Waiting for application to be ready...' &&
+        sleep 60 &&
+        echo 'Running security tests...' &&
+        zap-baseline.py -t http://frontend-e2e:4200 -r security-report.html &&
+        echo 'Security tests completed!'
+      "
+
+volumes:
+  test_coverage:
+    driver: local
+    name: esc_test_coverage
+  e2e_screenshots:
+    driver: local
+    name: esc_e2e_screenshots
+  e2e_videos:
+    driver: local
+    name: esc_e2e_videos
+  performance_reports:
+    driver: local
+    name: esc_performance_reports
+  security_reports:
+    driver: local
+    name: esc_security_reports
+
+networks:
+  esc_test_network:
+    driver: bridge
+    name: esc_test_network
+    ipam:
+      config:
+        - subnet: 172.23.0.0/16

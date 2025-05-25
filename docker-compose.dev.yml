@@ -1,0 +1,218 @@
+# ESC Football App - Docker Compose pour le développement
+# Espoir Sportif de Chorbane
+
+version: '3.8'
+
+services:
+  # =============================================================================
+  # SERVICES DE DÉVELOPPEMENT
+  # =============================================================================
+
+  # Base de données PostgreSQL avec configuration de développement
+  db:
+    image: postgres:15-alpine
+    container_name: esc_db_dev
+    environment:
+      POSTGRES_DB: esc_db_dev
+      POSTGRES_USER: esc_dev_user
+      POSTGRES_PASSWORD: esc_dev_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./database/seed-dev.sql:/docker-entrypoint-initdb.d/02-seed-dev.sql
+    networks:
+      - esc_dev_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U esc_dev_user -d esc_db_dev"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # Redis pour le développement
+  redis:
+    image: redis:7-alpine
+    container_name: esc_redis_dev
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - esc_dev_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # Backend Flask avec hot reload
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: esc_backend_dev
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - FLASK_RUN_HOST=0.0.0.0
+      - FLASK_RUN_PORT=5000
+      - DATABASE_URL=postgresql://esc_dev_user:esc_dev_password@db:5432/esc_db_dev
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=dev-secret-key-not-for-production
+      - JWT_SECRET_KEY=dev-jwt-secret-key-not-for-production
+      - CORS_ORIGINS=http://localhost:4200,http://localhost:3000,http://127.0.0.1:4200
+      - UPLOAD_FOLDER=/app/uploads
+      - MAX_CONTENT_LENGTH=16777216
+      - MAIL_SERVER=mailhog
+      - MAIL_PORT=1025
+      - MAIL_USE_TLS=0
+      - MAIL_USERNAME=
+      - MAIL_PASSWORD=
+    ports:
+      - "5000:5000"
+      - "5678:5678"  # Port pour le debugger Python
+    volumes:
+      - ./backend:/app
+      - backend_dev_uploads:/app/uploads
+      - backend_dev_logs:/app/logs
+    networks:
+      - esc_dev_network
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
+  # Frontend Angular avec hot reload
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: esc_frontend_dev
+    environment:
+      - NODE_ENV=development
+      - API_URL=http://localhost:4200/api
+      - NG_CLI_ANALYTICS=false
+      - CHOKIDAR_USEPOLLING=true
+    ports:
+      - "4200:4200"
+      - "49153:49153"  # Port pour le live reload
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - frontend_dev_dist:/app/dist
+    networks:
+      - esc_dev_network
+    depends_on:
+      - backend
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+
+  # =============================================================================
+  # OUTILS DE DÉVELOPPEMENT
+  # =============================================================================
+
+  # pgAdmin pour l'administration de la base de données
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: esc_pgadmin_dev
+    environment:
+      PGADMIN_DEFAULT_EMAIL: dev@esc.tn
+      PGADMIN_DEFAULT_PASSWORD: dev123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_dev_data:/var/lib/pgadmin
+      - ./pgadmin/servers-dev.json:/pgadmin4/servers.json
+    networks:
+      - esc_dev_network
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  # Redis Commander
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: esc_redis_commander_dev
+    environment:
+      - REDIS_HOSTS=local:redis:6379:0
+      - HTTP_USER=dev
+      - HTTP_PASSWORD=dev123
+    ports:
+      - "8081:8081"
+    networks:
+      - esc_dev_network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # Mailhog pour tester les emails
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: esc_mailhog_dev
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    networks:
+      - esc_dev_network
+    restart: unless-stopped
+
+  # Adminer (alternative légère à pgAdmin)
+  adminer:
+    image: adminer:latest
+    container_name: esc_adminer_dev
+    ports:
+      - "8080:8080"
+    networks:
+      - esc_dev_network
+    depends_on:
+      - db
+    restart: unless-stopped
+
+volumes:
+  postgres_dev_data:
+    driver: local
+    name: esc_postgres_dev_data
+  redis_dev_data:
+    driver: local
+    name: esc_redis_dev_data
+  backend_dev_uploads:
+    driver: local
+    name: esc_backend_dev_uploads
+  backend_dev_logs:
+    driver: local
+    name: esc_backend_dev_logs
+  pgadmin_dev_data:
+    driver: local
+    name: esc_pgadmin_dev_data
+  frontend_dev_dist:
+    driver: local
+    name: esc_frontend_dev_dist
+
+networks:
+  esc_dev_network:
+    driver: bridge
+    name: esc_dev_network
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16

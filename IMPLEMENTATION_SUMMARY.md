@@ -20,14 +20,14 @@
 - ✅ Validation des données avec Marshmallow
 - ✅ Support des uploads de fichiers
 
-### 🅰️ **Frontend Angular (Port 5005)**
+### 🅰️ **Frontend Angular (Port 4200)**
 - ✅ Structure Angular 19 avec Angular Material
 - ✅ Services d'authentification et API
 - ✅ Modèles TypeScript correspondant au backend
 - ✅ Composant de connexion avec Material Design
 - ✅ Guards et intercepteurs HTTP
 - ✅ Configuration des routes lazy-loading
-- ✅ **Port configuré sur 5005** ✨
+- ✅ **Port configuré sur 4200** ✨
 - ✅ Architecture modulaire (core, features, shared)
 - ✅ Gestion d'état réactive avec RxJS
 - ✅ Interface responsive et moderne
@@ -43,11 +43,18 @@
 ### 🛠️ **DevOps et Automatisation**
 - ✅ **Makefile complet** avec toutes les commandes utiles
 - ✅ Scripts de démarrage (PowerShell et Bash)
-- ✅ Docker Compose pour développement et production
+- ✅ **Docker Compose multi-environnements** ✨
+  - `docker-compose.yml` - Configuration principale
+  - `docker-compose.dev.yml` - Développement avec hot reload
+  - `docker-compose.prod.yml` - Production optimisée
+  - `docker-compose.test.yml` - Tests automatisés
+  - `docker-compose.monitoring.yml` - Monitoring complet
+  - `docker-compose.override.yml` - Overrides locaux
 - ✅ Configuration CI/CD prête
 - ✅ .gitignore complet
 - ✅ Scripts de sauvegarde automatique
 - ✅ Monitoring et health checks
+- ✅ **Documentation Docker complète** (DOCKER.md)
 
 ---
 
@@ -57,7 +64,7 @@
 |---------|-----|--------|
 | **Backend API** | http://localhost:5000 | ✅ **TESTÉ ET FONCTIONNEL** |
 | **API Health Check** | http://localhost:5000/api/health | ✅ **TESTÉ ET FONCTIONNEL** |
-| **Frontend Angular** | http://localhost:5005 | 🔄 **EN COURS DE DÉMARRAGE** |
+| **Frontend Angular** | http://localhost:4200 | 🔄 **EN COURS DE DÉMARRAGE** |
 | **pgAdmin** | http://localhost:5050 | ✅ **DISPONIBLE** |
 | **PostgreSQL** | localhost:5432 | ✅ **OPÉRATIONNEL** |
 | **Redis** | localhost:6379 | ✅ **OPÉRATIONNEL** |
@@ -80,7 +87,7 @@ docker-compose up -d db redis
 cd backend && python run.py
 
 # 3. Frontend
-cd frontend && ng serve --port 5005
+cd frontend && ng serve --port 4200
 ```
 
 ### Commandes utiles

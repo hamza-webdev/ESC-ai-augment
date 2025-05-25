@@ -79,9 +79,9 @@ services:
     container_name: esc_frontend
     environment:
       - NODE_ENV=development
-      - API_URL=http://localhost:5000/api
+      - API_URL=http://localhost:4200/api
     ports:
-      - "5005:5005"
+      - "4200:4200"
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -170,26 +170,73 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@esc.tn
       PGADMIN_DEFAULT_PASSWORD: admin123
       PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
     ports:
       - "5050:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json
     depends_on:
       - db
     networks:
       - esc_network
+    restart: unless-stopped
     profiles:
       - development
+      - tools
+
+  # Redis Commander (for Redis management)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: esc_redis_commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379:0
+      - HTTP_USER=admin
+      - HTTP_PASSWORD=admin123
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - esc_network
+    restart: unless-stopped
+    profiles:
+      - development
+      - tools
+
+  # Mailhog (for email testing in development)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: esc_mailhog
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    networks:
+      - esc_network
+    restart: unless-stopped
+    profiles:
+      - development
+      - tools
 
 volumes:
   postgres_data:
     driver: local
+    name: esc_postgres_data
   redis_data:
     driver: local
+    name: esc_redis_data
   backend_uploads:
     driver: local
+    name: esc_backend_uploads
   pgadmin_data:
     driver: local
+    name: esc_pgadmin_data
+  backend_logs:
+    driver: local
+    name: esc_backend_logs
+  frontend_dist:
+    driver: local
+    name: esc_frontend_dist
 
 networks:
   esc_network:

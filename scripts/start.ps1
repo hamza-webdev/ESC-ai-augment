@@ -234,7 +234,7 @@ function Show-Status {
     Write-Success "Application ESC Football démarrée avec succès !"
     Write-Host ""
     Write-Info "🌐 Accès aux services :"
-    Write-Host "   • Frontend Angular: http://localhost:5005" -ForegroundColor White
+    Write-Host "   • Frontend Angular: http://localhost:4200" -ForegroundColor White
     Write-Host "   • Backend API: http://localhost:5000" -ForegroundColor White
     Write-Host "   • API Health Check: http://localhost:5000/api/health" -ForegroundColor White
     Write-Host "   • pgAdmin: http://localhost:5050" -ForegroundColor White

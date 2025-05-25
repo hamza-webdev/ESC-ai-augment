@@ -1,0 +1,273 @@
+# ESC Football App - Docker Compose pour la production
+# Espoir Sportif de Chorbane
+
+version: '3.8'
+
+services:
+  # =============================================================================
+  # SERVICES DE PRODUCTION
+  # =============================================================================
+
+  # Base de données PostgreSQL avec configuration de production
+  db:
+    image: postgres:15-alpine
+    container_name: esc_db_prod
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-esc_db}
+      POSTGRES_USER: ${POSTGRES_USER:-esc_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST_AUTH_METHOD: md5
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./database/seed-prod.sql:/docker-entrypoint-initdb.d/02-seed-prod.sql
+      - ./backups:/backups
+    networks:
+      - esc_prod_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-esc_user} -d ${POSTGRES_DB:-esc_db}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis pour la production avec persistance
+  redis:
+    image: redis:7-alpine
+    container_name: esc_redis_prod
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_prod_data:/data
+      - ./redis/redis-prod.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - esc_prod_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Backend Flask optimisé pour la production
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: esc_backend_prod
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=0
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-esc_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-esc_db}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://esc.tn,https://www.esc.tn}
+      - UPLOAD_FOLDER=/app/uploads
+      - MAX_CONTENT_LENGTH=16777216
+      - MAIL_SERVER=${MAIL_SERVER}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_USE_TLS=${MAIL_USE_TLS:-1}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+    volumes:
+      - backend_prod_uploads:/app/uploads
+      - backend_prod_logs:/app/logs
+    networks:
+      - esc_prod_network
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # Frontend Angular optimisé pour la production
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: esc_frontend_prod
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - frontend_prod_dist:/app/dist
+    networks:
+      - esc_prod_network
+    depends_on:
+      - backend
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Nginx reverse proxy et serveur web
+  nginx:
+    image: nginx:alpine
+    container_name: esc_nginx_prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx-prod.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - backend_prod_uploads:/var/www/uploads
+      - frontend_prod_dist:/var/www/html
+      - nginx_logs:/var/log/nginx
+    networks:
+      - esc_prod_network
+    depends_on:
+      - backend
+      - frontend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # Celery Worker pour les tâches en arrière-plan
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: esc_celery_prod
+    command: celery -A app.celery worker --loglevel=info --concurrency=4
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-esc_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-esc_db}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - SECRET_KEY=${SECRET_KEY}
+    volumes:
+      - backend_prod_uploads:/app/uploads
+      - backend_prod_logs:/app/logs
+    networks:
+      - esc_prod_network
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Celery Beat pour les tâches planifiées
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: esc_celery_beat_prod
+    command: celery -A app.celery beat --loglevel=info
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-esc_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-esc_db}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - SECRET_KEY=${SECRET_KEY}
+    volumes:
+      - backend_prod_logs:/app/logs
+    networks:
+      - esc_prod_network
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Service de sauvegarde automatique
+  backup:
+    image: postgres:15-alpine
+    container_name: esc_backup_prod
+    environment:
+      - PGPASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_USER=${POSTGRES_USER:-esc_user}
+      - POSTGRES_DB=${POSTGRES_DB:-esc_db}
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup-prod.sh:/backup.sh
+    networks:
+      - esc_prod_network
+    depends_on:
+      - db
+    command: >
+      sh -c "
+        chmod +x /backup.sh &&
+        while true; do
+          /backup.sh
+          sleep 86400
+        done
+      "
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_prod_data:
+    driver: local
+    name: esc_postgres_prod_data
+  redis_prod_data:
+    driver: local
+    name: esc_redis_prod_data
+  backend_prod_uploads:
+    driver: local
+    name: esc_backend_prod_uploads
+  backend_prod_logs:
+    driver: local
+    name: esc_backend_prod_logs
+  frontend_prod_dist:
+    driver: local
+    name: esc_frontend_prod_dist
+  nginx_logs:
+    driver: local
+    name: esc_nginx_logs
+
+networks:
+  esc_prod_network:
+    driver: bridge
+    name: esc_prod_network
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16

@@ -91,7 +91,7 @@ dev-backend: ## Démarrage du backend en mode développement
 .PHONY: dev-frontend
 dev-frontend: ## Démarrage du frontend en mode développement
 	@echo "$(YELLOW)🅰️  Démarrage du frontend Angular...$(NC)"
-	cd $(FRONTEND_DIR) && $(NG) serve --host 0.0.0.0 --port 5005
+	cd $(FRONTEND_DIR) && $(NG) serve --host 0.0.0.0 --port 4200
 
 .PHONY: dev-watch
 dev-watch: ## Démarrage avec rechargement automatique
@@ -176,6 +176,46 @@ docker-logs: ## Affichage des logs Docker
 .PHONY: docker-ps
 docker-ps: ## Statut des conteneurs Docker
 	$(DOCKER_COMPOSE) ps
+
+# =============================================================================
+# DOCKER COMPOSE SPÉCIALISÉS
+# =============================================================================
+
+.PHONY: dev-docker
+dev-docker: ## Démarrage avec docker-compose.dev.yml
+	@echo "$(YELLOW)🐳 Démarrage en mode développement Docker...$(NC)"
+	docker-compose -f docker-compose.dev.yml up -d
+	@echo "$(GREEN)✅ Services de développement démarrés$(NC)"
+
+.PHONY: prod-docker
+prod-docker: ## Démarrage avec docker-compose.prod.yml
+	@echo "$(YELLOW)🐳 Démarrage en mode production Docker...$(NC)"
+	docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+	@echo "$(GREEN)✅ Services de production démarrés$(NC)"
+
+.PHONY: test-docker
+test-docker: ## Exécution des tests avec Docker
+	@echo "$(YELLOW)🐳 Exécution des tests avec Docker...$(NC)"
+	docker-compose -f docker-compose.test.yml up --abort-on-container-exit
+	@echo "$(GREEN)✅ Tests terminés$(NC)"
+
+.PHONY: monitoring-up
+monitoring-up: ## Démarrage des services de monitoring
+	@echo "$(YELLOW)🐳 Démarrage du monitoring...$(NC)"
+	docker-compose -f docker-compose.monitoring.yml up -d
+	@echo "$(GREEN)✅ Services de monitoring démarrés$(NC)"
+
+.PHONY: monitoring-down
+monitoring-down: ## Arrêt des services de monitoring
+	@echo "$(YELLOW)🛑 Arrêt du monitoring...$(NC)"
+	docker-compose -f docker-compose.monitoring.yml down
+	@echo "$(GREEN)✅ Services de monitoring arrêtés$(NC)"
+
+.PHONY: tools-up
+tools-up: ## Démarrage des outils de développement
+	@echo "$(YELLOW)🐳 Démarrage des outils...$(NC)"
+	$(DOCKER_COMPOSE) --profile tools up -d
+	@echo "$(GREEN)✅ Outils de développement démarrés$(NC)"
 
 # =============================================================================
 # TESTING
@@ -280,7 +320,7 @@ status: ## Statut de l'application
 	@echo ""
 	@echo "$(YELLOW)🌐 Endpoints:$(NC)"
 	@echo "  • Backend API: http://localhost:5000"
-	@echo "  • Frontend:    http://localhost:5005"
+	@echo "  • Frontend:    http://localhost:4200"
 	@echo "  • pgAdmin:     http://localhost:5050"
 	@echo ""
 
@@ -301,7 +341,7 @@ shell-frontend: ## Shell dans le conteneur frontend
 health: ## Vérification de la santé de l'application
 	@echo "$(YELLOW)🏥 Vérification de la santé...$(NC)"
 	@curl -s http://localhost:5000/api/health || echo "$(RED)❌ Backend non accessible$(NC)"
-	@curl -s http://localhost:5005 > /dev/null && echo "$(GREEN)✅ Frontend accessible$(NC)" || echo "$(RED)❌ Frontend non accessible$(NC)"
+	@curl -s http://localhost:4200 > /dev/null && echo "$(GREEN)✅ Frontend accessible$(NC)" || echo "$(RED)❌ Frontend non accessible$(NC)"
 
 # =============================================================================
 # QUICK START
@@ -322,7 +362,7 @@ quick-start: ## Démarrage rapide complet
 	@echo ""
 	@echo "$(BLUE)Endpoints disponibles:$(NC)"
 	@echo "  • API: http://localhost:5000/api/health"
-	@echo "  • Frontend: http://localhost:5005 (après 'make dev-frontend')"
+	@echo "  • Frontend: http://localhost:4200 (après 'make dev-frontend')"
 	@echo ""
 
 # =============================================================================

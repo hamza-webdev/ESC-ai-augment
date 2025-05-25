@@ -224,7 +224,7 @@ show_status() {
     print_success "Application ESC Football démarrée avec succès !"
     echo ""
     print_info "🌐 Accès aux services :"
-    echo "   • Frontend Angular: http://localhost:5005"
+    echo "   • Frontend Angular: http://localhost:4200"
     echo "   • Backend API: http://localhost:5000"
     echo "   • API Health Check: http://localhost:5000/api/health"
     echo "   • pgAdmin: http://localhost:5050"
