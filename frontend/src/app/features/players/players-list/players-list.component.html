@@ -1,1 +1,292 @@
-<p>players-list works!</p>
+<!-- Header Section -->
+<div class="page-header">
+  <div class="header-content">
+    <div class="header-title">
+      <h1>
+        <mat-icon>sports_soccer</mat-icon>
+        Gestion des Joueurs
+      </h1>
+      <p class="subtitle">Espoir Sportif de Chorbane</p>
+    </div>
+
+    <div class="header-actions">
+      <button mat-raised-button color="primary" (click)="openAddPlayerDialog()">
+        <mat-icon>add</mat-icon>
+        Ajouter un joueur
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Filters and Search -->
+<mat-card class="filters-card">
+  <mat-card-content>
+    <div class="filters-container">
+      <!-- Search -->
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Rechercher un joueur</mat-label>
+        <input matInput
+               placeholder="Nom, prénom, numéro..."
+               [(ngModel)]="searchTerm"
+               (input)="onSearch()">
+        <mat-icon matSuffix>search</mat-icon>
+      </mat-form-field>
+
+      <!-- Position Filter -->
+      <mat-form-field appearance="outline">
+        <mat-label>Position</mat-label>
+        <mat-select [(ngModel)]="selectedPosition" (selectionChange)="onFilterChange()">
+          <mat-option value="">Toutes les positions</mat-option>
+          <mat-option *ngFor="let position of positions" [value]="position.value">
+            {{ position.label }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Status Filter -->
+      <mat-form-field appearance="outline">
+        <mat-label>Statut</mat-label>
+        <mat-select [(ngModel)]="selectedStatus" (selectionChange)="onFilterChange()">
+          <mat-option value="">Tous les statuts</mat-option>
+          <mat-option value="active">Actif</mat-option>
+          <mat-option value="injured">Blessé</mat-option>
+          <mat-option value="suspended">Suspendu</mat-option>
+          <mat-option value="inactive">Inactif</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Age Range -->
+      <mat-form-field appearance="outline">
+        <mat-label>Âge</mat-label>
+        <mat-select [(ngModel)]="selectedAgeRange" (selectionChange)="onFilterChange()">
+          <mat-option value="">Tous les âges</mat-option>
+          <mat-option value="16-20">16-20 ans</mat-option>
+          <mat-option value="21-25">21-25 ans</mat-option>
+          <mat-option value="26-30">26-30 ans</mat-option>
+          <mat-option value="31+">31+ ans</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Clear Filters -->
+      <button mat-stroked-button (click)="clearFilters()">
+        <mat-icon>clear</mat-icon>
+        Effacer les filtres
+      </button>
+    </div>
+  </mat-card-content>
+</mat-card>
+
+<!-- Statistics Cards -->
+<div class="stats-container">
+  <mat-card class="stat-card">
+    <mat-card-content>
+      <div class="stat-content">
+        <div class="stat-icon">
+          <mat-icon>group</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h3>{{ totalPlayers }}</h3>
+          <p>Total Joueurs</p>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="stat-card">
+    <mat-card-content>
+      <div class="stat-content">
+        <div class="stat-icon active">
+          <mat-icon>sports_soccer</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h3>{{ activePlayers }}</h3>
+          <p>Joueurs Actifs</p>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="stat-card">
+    <mat-card-content>
+      <div class="stat-content">
+        <div class="stat-icon injured">
+          <mat-icon>healing</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h3>{{ injuredPlayers }}</h3>
+          <p>Joueurs Blessés</p>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="stat-card">
+    <mat-card-content>
+      <div class="stat-content">
+        <div class="stat-icon average">
+          <mat-icon>trending_up</mat-icon>
+        </div>
+        <div class="stat-info">
+          <h3>{{ averageAge }}</h3>
+          <p>Âge Moyen</p>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<!-- Players Table -->
+<mat-card class="players-table-card">
+  <mat-card-header>
+    <mat-card-title>
+      <mat-icon>list</mat-icon>
+      Liste des Joueurs
+    </mat-card-title>
+    <div class="table-actions">
+      <button mat-icon-button [matMenuTriggerFor]="viewMenu">
+        <mat-icon>view_module</mat-icon>
+      </button>
+      <mat-menu #viewMenu="matMenu">
+        <button mat-menu-item (click)="toggleView('table')">
+          <mat-icon>table_view</mat-icon>
+          Vue tableau
+        </button>
+        <button mat-menu-item (click)="toggleView('cards')">
+          <mat-icon>view_module</mat-icon>
+          Vue cartes
+        </button>
+      </mat-menu>
+    </div>
+  </mat-card-header>
+
+  <mat-card-content>
+    <!-- Loading Spinner -->
+    <div *ngIf="loading" class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Chargement des joueurs...</p>
+    </div>
+
+    <!-- Table View -->
+    <div *ngIf="!loading && viewMode === 'table'" class="table-container">
+      <table mat-table [dataSource]="dataSource" matSort class="players-table">
+
+        <!-- Avatar Column -->
+        <ng-container matColumnDef="avatar">
+          <th mat-header-cell *matHeaderCellDef>Photo</th>
+          <td mat-cell *matCellDef="let player">
+            <div class="player-avatar">
+              <img [src]="player.avatar || '/assets/images/default-avatar.png'"
+                   [alt]="player.firstName + ' ' + player.lastName"
+                   (error)="onImageError($event)">
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Number Column -->
+        <ng-container matColumnDef="number">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>N°</th>
+          <td mat-cell *matCellDef="let player">
+            <span class="player-number">{{ player.number }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Name Column -->
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Nom</th>
+          <td mat-cell *matCellDef="let player">
+            <div class="player-name">
+              <strong>{{ player.firstName }} {{ player.lastName }}</strong>
+              <small>{{ player.nickname }}</small>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Position Column -->
+        <ng-container matColumnDef="position">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Position</th>
+          <td mat-cell *matCellDef="let player">
+            <mat-chip-set>
+              <mat-chip [class]="'position-' + player.position.toLowerCase()">
+                {{ getPositionLabel(player.position) }}
+              </mat-chip>
+            </mat-chip-set>
+          </td>
+        </ng-container>
+
+        <!-- Age Column -->
+        <ng-container matColumnDef="age">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Âge</th>
+          <td mat-cell *matCellDef="let player">
+            {{ calculateAge(player.dateOfBirth) }} ans
+          </td>
+        </ng-container>
+
+        <!-- Status Column -->
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header>Statut</th>
+          <td mat-cell *matCellDef="let player">
+            <mat-chip-set>
+              <mat-chip [class]="'status-' + player.status">
+                <mat-icon>{{ getStatusIcon(player.status) }}</mat-icon>
+                {{ getStatusLabel(player.status) }}
+              </mat-chip>
+            </mat-chip-set>
+          </td>
+        </ng-container>
+
+        <!-- Actions Column -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let player">
+            <button mat-icon-button [matMenuTriggerFor]="actionMenu">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #actionMenu="matMenu">
+              <button mat-menu-item (click)="viewPlayer(player)">
+                <mat-icon>visibility</mat-icon>
+                Voir le profil
+              </button>
+              <button mat-menu-item (click)="editPlayer(player)">
+                <mat-icon>edit</mat-icon>
+                Modifier
+              </button>
+              <button mat-menu-item (click)="viewStats(player)">
+                <mat-icon>analytics</mat-icon>
+                Statistiques
+              </button>
+              <mat-divider></mat-divider>
+              <button mat-menu-item (click)="deletePlayer(player)" class="delete-action">
+                <mat-icon>delete</mat-icon>
+                Supprimer
+              </button>
+            </mat-menu>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+            (click)="viewPlayer(row)"
+            class="player-row"></tr>
+      </table>
+
+      <!-- No Data -->
+      <div *ngIf="dataSource.data.length === 0" class="no-data">
+        <mat-icon>sports_soccer</mat-icon>
+        <h3>Aucun joueur trouvé</h3>
+        <p>Aucun joueur ne correspond à vos critères de recherche.</p>
+        <button mat-raised-button color="primary" (click)="clearFilters()">
+          Effacer les filtres
+        </button>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <mat-paginator *ngIf="!loading && dataSource.data.length > 0"
+                   [pageSizeOptions]="[10, 25, 50, 100]"
+                   [pageSize]="pageSize"
+                   [length]="totalCount"
+                   (page)="onPageChange($event)"
+                   showFirstLastButtons>
+    </mat-paginator>
+  </mat-card-content>
+</mat-card>
