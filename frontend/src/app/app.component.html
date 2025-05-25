@@ -1,15 +1,80 @@
 <!-- ESC Football App - Espoir Sportif de Chorbane -->
-
-<!-- Header -->
-<app-header></app-header>
-
-<!-- Main Layout -->
 <div class="app-container">
-  <!-- Sidebar -->
-  <app-sidebar class="app-sidebar"></app-sidebar>
+  <!-- Header -->
+  <header class="app-header">
+    <mat-toolbar color="primary">
+      <button mat-icon-button (click)="toggleSidenav()" *ngIf="isAuthenticated">
+        <mat-icon>menu</mat-icon>
+      </button>
 
-  <!-- Main Content -->
-  <main class="app-content">
+      <span class="app-title">
+        <mat-icon>sports_soccer</mat-icon>
+        ESC Football
+      </span>
+
+      <span class="spacer"></span>
+
+      <div class="header-actions" *ngIf="isAuthenticated">
+        <button mat-icon-button [matMenuTriggerFor]="userMenu">
+          <mat-icon>account_circle</mat-icon>
+        </button>
+        <mat-menu #userMenu="matMenu">
+          <button mat-menu-item (click)="viewProfile()">
+            <mat-icon>person</mat-icon>
+            Profil
+          </button>
+          <button mat-menu-item (click)="logout()">
+            <mat-icon>logout</mat-icon>
+            Déconnexion
+          </button>
+        </mat-menu>
+      </div>
+    </mat-toolbar>
+  </header>
+
+  <!-- Sidenav -->
+  <mat-sidenav-container class="sidenav-container" *ngIf="isAuthenticated">
+    <mat-sidenav #sidenav mode="side" opened class="sidenav">
+      <nav class="nav-menu">
+        <a mat-list-item routerLink="/dashboard" routerLinkActive="active">
+          <mat-icon>dashboard</mat-icon>
+          <span>Tableau de bord</span>
+        </a>
+
+        <a mat-list-item routerLink="/players" routerLinkActive="active">
+          <mat-icon>sports_soccer</mat-icon>
+          <span>Joueurs</span>
+        </a>
+
+        <a mat-list-item routerLink="/matches" routerLinkActive="active">
+          <mat-icon>event</mat-icon>
+          <span>Matchs</span>
+        </a>
+
+        <a mat-list-item routerLink="/trainings" routerLinkActive="active">
+          <mat-icon>fitness_center</mat-icon>
+          <span>Entraînements</span>
+        </a>
+
+        <a mat-list-item routerLink="/finances" routerLinkActive="active">
+          <mat-icon>account_balance</mat-icon>
+          <span>Finances</span>
+        </a>
+
+        <a mat-list-item routerLink="/news" routerLinkActive="active">
+          <mat-icon>article</mat-icon>
+          <span>Actualités</span>
+        </a>
+      </nav>
+    </mat-sidenav>
+
+    <mat-sidenav-content class="main-content">
+      <router-outlet></router-outlet>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
+
+  <!-- Content without sidenav for non-authenticated users -->
+  <main class="main-content-full" *ngIf="!isAuthenticated">
     <router-outlet></router-outlet>
   </main>
 </div>
