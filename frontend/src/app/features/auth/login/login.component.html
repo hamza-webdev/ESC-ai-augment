@@ -1,1 +1,89 @@
-<p>login works!</p>
+<div class="login-container">
+  <div class="login-card-container">
+    <mat-card class="login-card">
+      <mat-card-header>
+        <div class="header-content">
+          <div class="logo">
+            <img src="assets/images/esc-logo.png" alt="ESC Logo" class="logo-img" />
+          </div>
+          <div class="title-section">
+            <mat-card-title>Connexion</mat-card-title>
+            <mat-card-subtitle>Espoir Sportif de Chorbane</mat-card-subtitle>
+          </div>
+        </div>
+      </mat-card-header>
+
+      <mat-card-content>
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+          <!-- Error Message -->
+          <div *ngIf="errorMessage" class="error-message">
+            <mat-icon>error</mat-icon>
+            <span>{{ errorMessage }}</span>
+          </div>
+
+          <!-- Username Field -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Nom d'utilisateur</mat-label>
+            <input
+              matInput
+              formControlName="username"
+              placeholder="Entrez votre nom d'utilisateur"
+              autocomplete="username"
+            />
+            <mat-icon matSuffix>person</mat-icon>
+            <mat-error *ngIf="loginForm.get('username')?.invalid && loginForm.get('username')?.touched">
+              {{ getErrorMessage('username') }}
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Password Field -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Mot de passe</mat-label>
+            <input
+              matInput
+              [type]="hidePassword ? 'password' : 'text'"
+              formControlName="password"
+              placeholder="Entrez votre mot de passe"
+              autocomplete="current-password"
+            />
+            <button
+              mat-icon-button
+              matSuffix
+              type="button"
+              (click)="hidePassword = !hidePassword"
+              [attr.aria-label]="'Hide password'"
+              [attr.aria-pressed]="hidePassword"
+            >
+              <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+            <mat-error *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
+              {{ getErrorMessage('password') }}
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Submit Button -->
+          <button
+            mat-raised-button
+            color="primary"
+            type="submit"
+            class="login-button full-width"
+            [disabled]="isLoading"
+          >
+            <span *ngIf="!isLoading">Se connecter</span>
+            <span *ngIf="isLoading" class="loading-content">
+              <mat-spinner diameter="20"></mat-spinner>
+              Connexion...
+            </span>
+          </button>
+        </form>
+      </mat-card-content>
+
+      <mat-card-footer>
+        <div class="footer-content">
+          <p class="version-info">Version 1.0.0</p>
+          <p class="copyright">© 2024 Espoir Sportif de Chorbane</p>
+        </div>
+      </mat-card-footer>
+    </mat-card>
+  </div>
+</div>
