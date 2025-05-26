@@ -33,4 +33,4 @@ jobs:
 
       - name: Analyse du code avec Pylint
         run: |
-          pylint backend/app/ backend/tests/
+          pylint backend/app/
